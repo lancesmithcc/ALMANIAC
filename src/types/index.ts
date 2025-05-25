@@ -209,6 +209,14 @@ export interface WeatherData {
   feelsLike?: number;
   visibility?: number;
   forecast?: ForecastDay[];
+  astro?: {
+    sunrise: string;
+    sunset: string;
+    moonrise: string;
+    moonset: string;
+    moon_phase: string;
+    moon_illumination: string;
+  };
 }
 
 export interface DeepSeekAnalysisRequest {

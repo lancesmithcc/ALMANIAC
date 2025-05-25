@@ -18,12 +18,40 @@ export async function POST(request: NextRequest) {
 
     // Gather data for analysis
     const plants = await getPlants();
-    const weather = includeWeather ? await getRecentWeather(7) : [];
+    // Fetch weather data including astro for the current day from our /api/weather endpoint
+    let weatherForAI: any[] = []; // Use a more specific type if available for weather data sent to AI
+    if (includeWeather) {
+      try {
+        const weatherResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`);
+        if (weatherResponse.ok) {
+          const weatherData = await weatherResponse.json();
+          // We want current conditions and moon phase for the AI
+          weatherForAI = [{
+            current: {
+              temperature: weatherData.temperature,
+              humidity: weatherData.humidity,
+              wind_speed: weatherData.windSpeed,
+              condition: weatherData.condition,
+              description: weatherData.description,
+              uv: weatherData.uv,
+              feelsLike: weatherData.feelsLike,
+            },
+            astro: weatherData.astro // This now includes moon phase, illumination etc.
+          }];
+        } else {
+          console.error('Failed to fetch detailed weather for AI');
+        }
+      } catch (fetchErr) {
+        console.error('Error fetching weather for AI:', fetchErr);
+      }
+    }
     const activities = includeActivities ? await getRecentActivities(20) : [];
 
     // Prepare the analysis prompt
-    const systemPrompt = `You are an expert agricultural AI assistant specializing in plant care, farming, and garden management. 
-    Analyze the provided data about plants, weather conditions, and recent activities to provide intelligent recommendations.
+    const systemPrompt = `You are an expert agricultural AI assistant specializing in sustainable farming, permaculture, and garden management. 
+    Analyze the provided data about plants, current weather conditions (including moon phase), and recent activities to provide intelligent recommendations.
+    Focus on permaculture principles such as working with nature, observing patterns, and creating resilient systems.
+    Consider the current moon phase and its potential influence on planting, harvesting, and other activities, if applicable to permaculture practices.
     
     Your response should be in JSON format with the following structure:
     {
@@ -51,20 +79,20 @@ export async function POST(request: NextRequest) {
     }`;
 
     const userPrompt = `
-    Please analyze the following farm/garden data and provide recommendations:
+    Please analyze the following farm/garden data and provide recommendations, focusing on permaculture and considering the moon phase:
 
     PLANTS DATA:
     ${JSON.stringify(plants, null, 2)}
 
-    RECENT WEATHER DATA:
-    ${JSON.stringify(weather, null, 2)}
+    CURRENT WEATHER & ASTROLOGICAL DATA (MOON PHASE):
+    ${JSON.stringify(weatherForAI, null, 2)} 
 
     RECENT ACTIVITIES:
     ${JSON.stringify(activities, null, 2)}
 
     ${question ? `SPECIFIC QUESTION: ${question}` : ''}
 
-    Please provide actionable recommendations based on this data, considering plant health, weather patterns, and recent care activities.
+    Please provide actionable recommendations based on this data, incorporating permaculture principles, plant health, weather patterns (including moon phase), and recent care activities.
     `;
 
     // Call DeepSeek API
@@ -150,7 +178,7 @@ export async function POST(request: NextRequest) {
       analysis: analysisResult,
       metadata: {
         plants_analyzed: plants.length,
-        weather_records: weather.length,
+        weather_records: weatherForAI.length,
         activities_reviewed: activities.length,
         timestamp: new Date().toISOString()
       }

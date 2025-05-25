@@ -10,7 +10,8 @@ import {
   CloudRain,
   MapPin,
   RefreshCw,
-  Calendar
+  Calendar,
+  Moon
 } from 'lucide-react';
 import { WeatherData } from '@/types';
 
@@ -333,7 +334,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
         </div>
 
         {/* Condition */}
-        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-4">
+        <div className={`bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-4 ${weather?.astro ? 'md:col-span-2 lg:col-span-2' : 'lg:col-span-1'}`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400">Condition</p>
@@ -342,6 +343,22 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
             {getWeatherIcon(weather?.condition || '')}
           </div>
         </div>
+
+        {/* Moon Phase - New Card */}
+        {weather?.astro && (
+          <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-lg p-4 md:col-span-2 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Moon Phase</p>
+                <p className="text-lg font-semibold text-indigo-400">{weather.astro.moon_phase}</p>
+                {weather.astro.moon_illumination && (
+                  <p className="text-xs text-gray-500">Illumination: {weather.astro.moon_illumination}%</p>
+                )}
+              </div>
+              <Moon className="w-8 h-8 text-indigo-400" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Compact Forecast Preview (non-detailed view) */}

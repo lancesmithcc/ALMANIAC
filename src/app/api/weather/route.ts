@@ -74,7 +74,8 @@ export async function GET(request: NextRequest) {
       uv: weatherData.current.uv,
       feelsLike: weatherData.current.feelslike_f,
       visibility: weatherData.current.vis_miles,
-      forecast: forecast
+      forecast: forecast,
+      astro: weatherData.forecast?.forecastday[0]?.astro
     });
 
   } catch (error) {

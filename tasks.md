@@ -36,6 +36,7 @@
 - [x] Implement AI-powered recommendations (real data integration)
 - [x] Remove all mock data and use real database data
 - [x] Add 3-day weather forecast display
+- [ ] Integrate Moon Phase (Astrology) tracking
 
 ## UI/UX Components
 - [x] Create dark theme configuration
@@ -45,6 +46,7 @@
 - [x] Implement emoji integration
 - [x] Add error handling and user feedback
 - [x] Add location settings modal for weather
+- [ ] Display Moon Phase in Weather Widget
 
 ## Data Management
 - [x] Create data models and types
@@ -65,6 +67,7 @@
 - [x] Create weather trend analysis (temperature, precipitation, humidity)
 - [ ] Implement plant health tracking
 - [ ] Add recommendation engine interface
+- [ ] Enhance AI to provide Permaculture tips based on moon phase and farm data
 
 ## Testing & Deployment
 - [ ] Add basic testing
@@ -88,8 +91,10 @@
 ✅ **Weather Trend Analysis:** Implemented charts for temperature, precipitation, and humidity trends.
 
 ## Next Steps
-1. Test AI recommendations with real plant data
-2. Add comprehensive data validation
-3. Implement Plant Health Tracking
-4. Create user documentation
-5. Final polishing and optimization 
+1. Integrate Moon Phase tracking (data and UI)
+2. Enhance AI for Permaculture and Moon Phase insights
+3. Test AI recommendations with real plant data
+4. Add comprehensive data validation
+5. Implement Plant Health Tracking
+6. Create user documentation
+7. Final polishing and optimization 
