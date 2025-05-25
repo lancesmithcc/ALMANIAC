@@ -32,6 +32,25 @@ export default function Dashboard() {
     try {
       setLoadingAI(true);
       setAiError(null);
+      
+      // First trigger new analysis
+      const analysisResponse = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: "Provide permaculture tips and recommendations based on my current garden conditions.",
+          includeWeather: true,
+          includeActivities: true
+        })
+      });
+      
+      if (!analysisResponse.ok) {
+        throw new Error('Failed to generate AI analysis');
+      }
+      
+      // Then get saved recommendations
       const response = await fetch('/api/ai/analyze');
       
       if (!response.ok) {
@@ -62,7 +81,7 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          question: "Analyze my current farm conditions and provide actionable recommendations.",
+          question: "Provide fresh permaculture tips and sustainable farming recommendations based on my current garden conditions, weather, and lunar phase.",
           includeWeather: true,
           includeActivities: true
         })

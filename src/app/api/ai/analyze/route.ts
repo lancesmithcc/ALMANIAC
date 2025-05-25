@@ -56,14 +56,26 @@ export async function POST(request: NextRequest) {
     const activities = includeActivities ? await getRecentActivities(20) : [];
 
     // Prepare the analysis prompt
-    const systemPrompt = `You are an expert agricultural AI assistant specializing in sustainable farming, permaculture, and garden management. 
-    Analyze the provided data about plants, current weather conditions (including moon phase and planetary positions), and recent activities to provide intelligent recommendations.
-    Focus on permaculture principles such as working with nature, observing patterns, and creating resilient systems.
+    const systemPrompt = `You are an expert permaculture consultant and agricultural AI assistant specializing in sustainable farming, biodynamic agriculture, and regenerative land management. 
+    Your expertise includes permaculture design principles, companion planting, natural pest management, soil health, water conservation, and lunar/planetary timing for farming activities.
     
-    IMPORTANT: Consider the current moon phase AND planetary positions in your analysis. Incorporate astrological insights relevant to farming, such as:
-    - How the current moon phase affects planting, harvesting, and other activities
-    - How the positions of planets like Mars, Venus, and Jupiter may influence different plant types
-    - Specific recommendations based on astrological conditions
+    Analyze the provided data about plants, current weather conditions (including moon phase and planetary positions), and recent activities to provide intelligent PERMACULTURE TIPS and recommendations.
+    
+    FOCUS AREAS - Provide specific permaculture advice on:
+    - Companion planting opportunities based on current plants
+    - Natural pest control methods using beneficial insects and plants
+    - Soil building techniques (composting, mulching, cover crops)
+    - Water harvesting and conservation strategies
+    - Polyculture design and guild creation
+    - Seasonal timing for activities based on lunar cycles
+    - Beneficial plant propagation and seed saving
+    - Creating beneficial habitat for pollinators and wildlife
+    
+    IMPORTANT: Consider the current moon phase AND planetary positions in your analysis. Incorporate biodynamic and astrological insights relevant to farming, such as:
+    - How the current moon phase affects planting, harvesting, pruning, and soil work
+    - Root days, leaf days, flower days, and fruit days based on lunar calendar
+    - How planetary positions may influence different plant types and activities
+    - Specific timing recommendations based on current astrological conditions
     
     Your response MUST be in valid JSON format with the following structure:
     {
@@ -95,7 +107,7 @@ export async function POST(request: NextRequest) {
     Your response MUST be properly formatted JSON without code fences or any explanatory text before or after the JSON.`;
 
     const userPrompt = `
-    Please analyze the following farm/garden data and provide recommendations, focusing on permaculture and considering astrological factors (moon phase and planetary positions):
+    Please analyze the following farm/garden data and provide PERMACULTURE TIPS and recommendations, focusing on sustainable, regenerative practices and considering astrological factors (moon phase and planetary positions):
 
     PLANTS DATA:
     ${JSON.stringify(plants, null, 2)}
@@ -108,9 +120,19 @@ export async function POST(request: NextRequest) {
 
     ${question ? `SPECIFIC QUESTION: ${question}` : ''}
 
-    IMPORTANT: Your analysis MUST include insights about how the current planetary positions and moon phase may affect farming activities. Be specific about which plants might benefit from current astrological conditions.
+    PROVIDE SPECIFIC PERMACULTURE TIPS INCLUDING:
+    1. Companion planting suggestions for current plants
+    2. Natural pest control and beneficial insect attraction methods
+    3. Soil health improvement techniques (composting, mulching strategies)
+    4. Water conservation and rainwater harvesting opportunities
+    5. Polyculture and guild design recommendations
+    6. Seasonal timing based on current lunar phase and planetary positions
+    7. Seed saving and propagation opportunities
+    8. Wildlife habitat creation suggestions
+
+    IMPORTANT: Your analysis MUST include specific insights about how the current planetary positions and moon phase affect farming activities. Provide timing recommendations for planting, harvesting, pruning, and soil work based on current astrological conditions.
     
-    Please provide actionable recommendations based on this data, incorporating permaculture principles, plant health, weather patterns, astrological influences, and recent care activities.
+    Focus on actionable PERMACULTURE recommendations that create resilient, sustainable growing systems.
     `;
 
     // Call DeepSeek API with improved error handling and retry logic
@@ -192,19 +214,26 @@ export async function POST(request: NextRequest) {
           {
             type: 'general',
             priority: 'medium',
-            description: 'Continue monitoring your plants and maintain regular care routines.',
-            reasoning: 'Based on the current data, your plants appear to be in good condition.',
-            confidence: 70
+            description: 'Start a compost system with kitchen scraps and garden waste to build soil health naturally.',
+            reasoning: 'Composting is a fundamental permaculture practice that creates nutrient-rich soil amendments while reducing waste.',
+            confidence: 90
+          },
+          {
+            type: 'general',
+            priority: 'medium',
+            description: 'Plant marigolds and nasturtiums as companion plants to attract beneficial insects and deter pests.',
+            reasoning: 'Companion planting is a core permaculture principle that creates beneficial relationships between plants.',
+            confidence: 85
           }
         ],
         insights: {
-          growth_trends: ['Regular monitoring recommended', 'Consistent growth patterns observed'],
-          weather_impacts: ['Weather conditions appear favorable', 'Temperatures suitable for current plant stages'],
-          health_observations: ['Plants showing good overall health', 'No significant pest issues detected'],
+          growth_trends: ['Focus on building soil biology through composting', 'Implement polyculture design for resilient systems'],
+          weather_impacts: ['Use mulching to conserve moisture and regulate soil temperature', 'Consider rainwater harvesting for sustainable irrigation'],
+          health_observations: ['Diversify plantings to create natural pest control', 'Observe beneficial insect populations'],
           astrological_influences: [
-            'Current moon phase supports root development',
-            'Planetary positions suggest favorable conditions for leafy greens',
-            'Consider the influence of Jupiter on fruiting plants'
+            'Current moon phase supports root development and soil preparation',
+            'Planetary positions suggest favorable timing for seed planting',
+            'Consider lunar calendar for optimal harvesting timing'
           ]
         },
         alerts: []
