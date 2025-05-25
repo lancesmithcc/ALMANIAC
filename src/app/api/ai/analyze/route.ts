@@ -6,7 +6,7 @@ import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommen
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { question, includeWeather = true, includeActivities = true } = body;
+    const { question: _question, includeWeather = true, includeActivities = true } = body;
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     console.log('API Key check - Key exists:', !!apiKey, 'Key length:', apiKey?.length || 0);
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           // const errorBody = await weatherResponse.text();
           // console.error('Failed to fetch detailed weather for AI. Body:', errorBody);
         }
-      } catch (fetchErr) {
+      } catch (_fetchErr) {
         // console.error('Error fetching weather for AI (exception):', fetchErr);
       }
     }
