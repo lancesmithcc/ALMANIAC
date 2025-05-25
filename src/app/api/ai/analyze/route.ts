@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
           // const errorBody = await weatherResponse.text();
           // console.error('Failed to fetch detailed weather for AI. Body:', errorBody);
         }
-      } catch (_fetchErr) {
-        // console.error('Error fetching weather for AI (exception):', _fetchErr);
+      } catch { // Removed _fetchErr, variable is not needed as it's unused
+        // console.error('An error occurred while fetching weather for AI, but it was ignored.'); 
       }
     }
     const activities = includeActivities ? await getRecentActivities(20) : [];
