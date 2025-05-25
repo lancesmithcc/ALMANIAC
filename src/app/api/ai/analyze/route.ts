@@ -141,31 +141,19 @@ export async function POST(request: NextRequest) {
     Focus on actionable PERMACULTURE recommendations that create resilient, sustainable growing systems.
     `;
 
-    // Call DeepSeek API with improved error handling and retry logic
+    // Call DeepSeek API with retry logic and timeout
     console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
-    console.log('DeepSeek API Key available:', !!apiKey);
-    console.log('System prompt length:', systemPrompt.length);
-    console.log('User prompt length:', userPrompt.length);
     
-    // Log sample data for debugging
-    if (plants.length > 0) {
-      console.log('Sample plant data:', JSON.stringify(plants[0], null, 2));
-    }
-    if (weatherForAI.length > 0) {
-      console.log('Weather/Astro data:', JSON.stringify(weatherForAI[0], null, 2));
-    }
-    
-    let response;
-    let retryCount = 0;
-    const maxRetries = 2;
-    const retryDelay = 1000; // 1 second delay between retries
-    
-    while (retryCount <= maxRetries) {
+    let aiResponseContent;
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = null;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`DeepSeek API attempt ${attempts}/${maxAttempts}`);
       try {
-        console.log(`DeepSeek API attempt ${retryCount + 1}/${maxRetries + 1}`);
-        
-        // Add timeout to prevent hanging requests
-        response = await axios.post(
+        const response = await axios.post(
           'https://api.deepseek.com/v1/chat/completions',
           {
             model: 'deepseek-chat',
@@ -174,55 +162,60 @@ export async function POST(request: NextRequest) {
               { role: 'user', content: userPrompt }
             ],
             temperature: 0.7,
-            max_tokens: 1500
+            max_tokens: 1500, // Slightly reduced max_tokens as a test
           },
           {
             headers: {
               'Authorization': `Bearer ${apiKey}`,
               'Content-Type': 'application/json'
             },
-            timeout: 45000 // Increased to 45 seconds timeout
+            timeout: 9000 // 9-second timeout for each attempt
           }
         );
-        
-        console.log('DeepSeek API request successful');
-        // If we get here, the request was successful
-        break;
-        
-      } catch (apiError) {
-        console.error(`DeepSeek API error (attempt ${retryCount + 1}/${maxRetries + 1}):`, apiError);
-        
-        if (axios.isAxiosError(apiError)) {
-          console.error('Axios error details:');
-          console.error('- Status:', apiError.response?.status);
-          console.error('- Status text:', apiError.response?.statusText);
-          console.error('- Data:', JSON.stringify(apiError.response?.data, null, 2));
-          console.error('- Code:', apiError.code);
-          console.error('- Message:', apiError.message);
-          console.error('- Request URL:', apiError.config?.url);
-          console.error('- Request method:', apiError.config?.method);
+        if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
+          aiResponseContent = response.data.choices[0].message.content;
+          console.log('DeepSeek API request successful.');
+          lastError = null; // Clear last error on success
+          break; // Exit loop on success
+        } else {
+          throw new Error('Invalid response structure from DeepSeek API');
         }
-        
-        if (retryCount >= maxRetries) {
-          // We've exhausted our retries, throw the error to be caught by the outer catch block
-          throw apiError;
+      } catch (error) {
+        lastError = error;
+        let errorMessage = 'Unknown error';
+        if (error instanceof Error) {
+          errorMessage = error.message;
         }
+        console.error(`DeepSeek API attempt ${attempts}/${maxAttempts} failed:`, errorMessage);
         
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
-        retryCount++;
+        if (axios.isAxiosError(error)) {
+          if (error.code === 'ECONNABORTED') {
+            console.error('Axios request timed out.');
+          } else {
+            console.error('Axios error details:', error.response?.status, error.response?.data);
+          }
+        } else if (error instanceof Error) {
+          // For non-Axios errors, log stack if available
+          console.error('Error stack:', error.stack);
+        }
+
+        if (attempts >= maxAttempts) {
+          console.error('All DeepSeek API attempts failed.');
+          throw lastError; // Re-throw the last error after all attempts
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff for retry
       }
     }
-    
-    if (!response || !response.data || !response.data.choices || !response.data.choices[0]) {
-      throw new Error('Invalid response format from DeepSeek API');
-    }
 
-    const aiResponse = response.data.choices[0].message.content;
-    console.log('Received raw response from DeepSeek AI.'); // Log raw response received
+    if (!aiResponseContent) {
+      // This should ideally be caught by the loop re-throwing lastError
+      throw new Error('Failed to get a response from DeepSeek API after multiple attempts.');
+    }
+    
+    console.log('Received raw response from DeepSeek AI.');
     
     // Pre-process to remove markdown code fences if present
-    let cleanedResponse = aiResponse;
+    let cleanedResponse = aiResponseContent;
     if (cleanedResponse.startsWith("```json")) {
       cleanedResponse = cleanedResponse.substring(7);
       if (cleanedResponse.endsWith("```")) {
@@ -238,7 +231,7 @@ export async function POST(request: NextRequest) {
       console.log('Successfully parsed AI response.');
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      console.error('Original AI Response:', aiResponse); // Log the original response for debugging
+      console.error('Original AI Response:', aiResponseContent); // Log the original response for debugging
       // Fallback response if parsing fails
       analysisResult = {
         recommendations: [
