@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Save, X } from 'lucide-react';
+import { Plant, PlantFormData } from '@/types';
+import { 
+  Plus,
+  X,
+  Trash2,
+  Clock,
+  RefreshCw,
+  Save
+} from 'lucide-react';
 
 interface PlantEntry {
   id?: string;
@@ -51,18 +59,31 @@ export default function PlantEntryForm() {
       const data = await response.json();
       if (data.success) {
         // Transform database format to component format
-        const transformedPlants = data.plants.map((plant: any) => ({
-          id: plant.id,
-          plant_type: plant.plant_type,
-          variety: plant.variety || '',
-          planting_date: plant.planting_date.split('T')[0], // Convert to YYYY-MM-DD format
-          location: plant.location,
-          notes: plant.notes || '',
-          health_status: plant.health_status,
-          stage: plant.stage,
-          created_at: plant.created_at,
-          updated_at: plant.updated_at
-        }));
+        const transformedPlants = data.plants.map((plant: Plant) => {
+          // Ensure planting_date is properly formatted as YYYY-MM-DD
+          let formattedDate = '';
+          if (typeof plant.planting_date === 'string') {
+            formattedDate = plant.planting_date.split('T')[0];
+          } else if (plant.planting_date instanceof Date) {
+            formattedDate = plant.planting_date.toISOString().split('T')[0];
+          } else {
+            // Fallback in case the date is in an unexpected format
+            formattedDate = new Date(plant.planting_date as any).toISOString().split('T')[0];
+          }
+          
+          return {
+            id: plant.id,
+            plant_type: plant.plant_type,
+            variety: plant.variety || '',
+            planting_date: formattedDate,
+            location: plant.location,
+            notes: plant.notes || '',
+            health_status: plant.health_status,
+            stage: plant.stage,
+            created_at: plant.created_at,
+            updated_at: plant.updated_at
+          };
+        });
         setEntries(transformedPlants);
       }
     } catch (err) {
@@ -296,7 +317,7 @@ export default function PlantEntryForm() {
                   </label>
                   <select
                     value={formData.health_status}
-                    onChange={(e) => setFormData({ ...formData, health_status: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, health_status: e.target.value as 'excellent' | 'good' | 'fair' | 'poor' })}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     disabled={saving}
                   >
@@ -313,7 +334,7 @@ export default function PlantEntryForm() {
                   </label>
                   <select
                     value={formData.stage}
-                    onChange={(e) => setFormData({ ...formData, stage: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, stage: e.target.value as 'seed' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest' })}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     disabled={saving}
                   >

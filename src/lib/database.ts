@@ -338,6 +338,13 @@ export async function testConnection() {
   }
 }
 
+interface WeatherTrendRow {
+  date: Date;
+  avg_temp: number | null;
+  total_precip: number | null;
+  avg_humidity: number | null;
+}
+
 export async function getWeatherTrends(days: 7 | 30 | 90 = 30): Promise<DailyWeatherTrend[]> {
   const pool = getDbPool();
   const query = `
@@ -354,11 +361,11 @@ export async function getWeatherTrends(days: 7 | 30 | 90 = 30): Promise<DailyWea
   
   try {
     const [rows] = await pool.execute(query, [days]);
-    return (rows as any[]).map(row => ({
+    return (rows as WeatherTrendRow[]).map(row => ({
       date: new Date(row.date).toISOString().split('T')[0], // Ensure YYYY-MM-DD format
-      avg_temp: row.avg_temp !== null ? parseFloat(row.avg_temp) : null,
-      total_precip: row.total_precip !== null ? parseFloat(row.total_precip) : null,
-      avg_humidity: row.avg_humidity !== null ? parseFloat(row.avg_humidity) : null,
+      avg_temp: row.avg_temp !== null ? parseFloat(row.avg_temp.toString()) : null,
+      total_precip: row.total_precip !== null ? parseFloat(row.total_precip.toString()) : null,
+      avg_humidity: row.avg_humidity !== null ? parseFloat(row.avg_humidity.toString()) : null,
     }));
   } catch (error) {
     console.error(`Error fetching weather trends for last ${days} days:`, error);

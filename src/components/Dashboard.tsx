@@ -310,7 +310,7 @@ export default function Dashboard() {
             <div className="text-center py-12 mt-8 bg-gray-900/30 backdrop-blur-sm rounded-xl border border-gray-800/50">
               <TrendingUp className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-400 mb-2">More Analytics Coming Soon</h3>
-              <p className="text-gray-500">We are working on providing more detailed insights into your farm's performance.</p>
+              <p className="text-gray-500">We are working on providing more detailed insights into your farm&apos;s performance.</p>
             </div>
           </div>
         )}

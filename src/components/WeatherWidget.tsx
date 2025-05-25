@@ -265,7 +265,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
                   placeholder="Enter city, zip code, or coordinates"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Examples: "New York", "90210", "40.7128,-74.0060"
+                  Examples: &quot;New York&quot;, &quot;90210&quot;, &quot;40.7128,-74.0060&quot;
                 </p>
               </div>
 

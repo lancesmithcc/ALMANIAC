@@ -207,7 +207,7 @@ export default function RecentEntries() {
                   
                   {activity.notes && (
                     <p className="text-xs text-gray-400 mt-2 italic">
-                      "{activity.notes}"
+                      &quot;{activity.notes}&quot;
                     </p>
                   )}
                 </div>
