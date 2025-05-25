@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plant, PlantFormData } from '@/types';
+import { Plant } from '@/types';
 import { 
   Plus,
   X,
-  Trash2,
-  Clock,
-  RefreshCw,
   Save
 } from 'lucide-react';
 

@@ -58,8 +58,8 @@ A modern, AI-powered almanac application for tracking plants, weather, and land 
    Then visit `http://localhost:3000/api/init-db` (POST request) to create the database tables.
 
 5. **Start the development server**
-   ```bash
-   npm run dev
+```bash
+npm run dev
    ```
 
 6. **Open your browser**
