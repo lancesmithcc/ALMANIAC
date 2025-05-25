@@ -86,6 +86,9 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
       
       const data = await response.json();
       setWeather(data);
+      if (data?.astro) {
+        console.log('Weather Astro Data:', data.astro);
+      }
     } catch (err) {
       console.error('Weather fetch error:', err);
       setError('Unable to load weather data');

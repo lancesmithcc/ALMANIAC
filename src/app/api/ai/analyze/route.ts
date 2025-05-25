@@ -25,9 +25,12 @@ export async function POST(request: NextRequest) {
     }> = [];
     if (includeWeather) {
       try {
-        const weatherResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`);
+        const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`;
+        console.log('Fetching weather for AI from:', apiUrl); // Log API URL
+        const weatherResponse = await fetch(apiUrl);
         if (weatherResponse.ok) {
           const weatherData: WeatherData = await weatherResponse.json();
+          console.log('Successfully fetched weather for AI:', weatherData.astro); // Log fetched astro data
           // We want current conditions and moon phase for the AI
           weatherForAI = [{
             current: {
@@ -42,10 +45,12 @@ export async function POST(request: NextRequest) {
             astro: weatherData.astro // This now includes moon phase, illumination etc.
           }];
         } else {
-          console.error('Failed to fetch detailed weather for AI');
+          console.error('Failed to fetch detailed weather for AI. Status:', weatherResponse.status);
+          const errorBody = await weatherResponse.text();
+          console.error('Failed to fetch detailed weather for AI. Body:', errorBody);
         }
       } catch (fetchErr) {
-        console.error('Error fetching weather for AI:', fetchErr);
+        console.error('Error fetching weather for AI (exception):', fetchErr);
       }
     }
     const activities = includeActivities ? await getRecentActivities(20) : [];
@@ -99,6 +104,7 @@ export async function POST(request: NextRequest) {
     `;
 
     // Call DeepSeek API
+    console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
     const response = await axios.post(
       'https://api.deepseek.com/v1/chat/completions',
       {
@@ -119,6 +125,7 @@ export async function POST(request: NextRequest) {
     );
 
     const aiResponse = response.data.choices[0].message.content;
+    console.log('Received raw response from DeepSeek AI.'); // Log raw response received
     
     // Pre-process to remove markdown code fences if present
     let cleanedResponse = aiResponse;
@@ -134,6 +141,7 @@ export async function POST(request: NextRequest) {
     let analysisResult: DeepSeekAnalysisResponse;
     try {
       analysisResult = JSON.parse(cleanedResponse);
+      console.log('Successfully parsed AI response.');
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.error('Original AI Response:', aiResponse); // Log the original response for debugging
@@ -188,9 +196,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('AI Analysis error:', error);
+    console.error('AI Analysis error (outer catch block):', error);
     
     if (axios.isAxiosError(error)) {
+      console.error('Axios error details:', error.response?.data);
       const status = error.response?.status || 500;
       const message = error.response?.data?.error?.message || 'Failed to analyze data with AI';
       return NextResponse.json({ error: message }, { status });
