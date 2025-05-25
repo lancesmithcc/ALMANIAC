@@ -20,129 +20,38 @@ export async function POST(request: NextRequest) {
 
     // Gather data for analysis
     const plants = await getPlants();
-    // Fetch weather data including astro for the current day from our /api/weather endpoint
     let weatherForAI: Array<{
       current: Partial<Pick<WeatherData, 'temperature' | 'humidity' | 'windSpeed' | 'condition' | 'description' | 'uv' | 'feelsLike'>>;
       astro: WeatherData['astro'];
     }> = [];
     if (includeWeather) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                        process.env.URL || 
-                        'http://localhost:3000';
-        const apiUrl = `${baseUrl}/api/weather?location=auto:ip&forecast=true`;
-        console.log('Fetching weather for AI from:', apiUrl); // Log API URL
+        const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`;
+        // console.log('Fetching weather for AI from:', apiUrl);
         const weatherResponse = await fetch(apiUrl);
         if (weatherResponse.ok) {
           const weatherData: WeatherData = await weatherResponse.json();
-          console.log('Successfully fetched weather for AI:', weatherData.astro); // Log fetched astro data
-          // We want current conditions and moon phase for the AI
-          weatherForAI = [{
-            current: {
-              temperature: weatherData.temperature,
-              humidity: weatherData.humidity,
-              windSpeed: weatherData.windSpeed,
-              condition: weatherData.condition,
-              description: weatherData.description,
-              uv: weatherData.uv,
-              feelsLike: weatherData.feelsLike,
-            },
-            astro: weatherData.astro // This now includes moon phase, illumination etc.
-          }];
+          // console.log('Successfully fetched weather for AI:', weatherData.astro);
+          weatherForAI = [{ current: { temperature: weatherData.temperature, humidity: weatherData.humidity, windSpeed: weatherData.windSpeed, condition: weatherData.condition, description: weatherData.description, uv: weatherData.uv, feelsLike: weatherData.feelsLike }, astro: weatherData.astro }];
         } else {
-          console.error('Failed to fetch detailed weather for AI. Status:', weatherResponse.status);
-          const errorBody = await weatherResponse.text();
-          console.error('Failed to fetch detailed weather for AI. Body:', errorBody);
+          // console.error('Failed to fetch detailed weather for AI. Status:', weatherResponse.status);
+          // const errorBody = await weatherResponse.text();
+          // console.error('Failed to fetch detailed weather for AI. Body:', errorBody);
         }
       } catch (fetchErr) {
-        console.error('Error fetching weather for AI (exception):', fetchErr);
+        // console.error('Error fetching weather for AI (exception):', fetchErr);
       }
     }
     const activities = includeActivities ? await getRecentActivities(20) : [];
 
-    // Prepare the analysis prompt
-    const systemPrompt = `You are an expert permaculture consultant and agricultural AI assistant specializing in sustainable farming, biodynamic agriculture, and regenerative land management. 
-    Your expertise includes permaculture design principles, companion planting, natural pest management, soil health, water conservation, and lunar/planetary timing for farming activities.
-    
-    Analyze the provided data about plants, current weather conditions (including moon phase and planetary positions), and recent activities to provide intelligent PERMACULTURE TIPS and recommendations.
-    
-    FOCUS AREAS - Provide specific permaculture advice on:
-    - Companion planting opportunities based on current plants
-    - Natural pest control methods using beneficial insects and plants
-    - Soil building techniques (composting, mulching, cover crops)
-    - Water harvesting and conservation strategies
-    - Polyculture design and guild creation
-    - Seasonal timing for activities based on lunar cycles
-    - Beneficial plant propagation and seed saving
-    - Creating beneficial habitat for pollinators and wildlife
-    
-    IMPORTANT: Consider the current moon phase AND planetary positions in your analysis. Incorporate biodynamic and astrological insights relevant to farming, such as:
-    - How the current moon phase affects planting, harvesting, pruning, and soil work
-    - Root days, leaf days, flower days, and fruit days based on lunar calendar
-    - How planetary positions may influence different plant types and activities
-    - Specific timing recommendations based on current astrological conditions
-    
-    Your response MUST be in valid JSON format with the following structure:
-    {
-      "recommendations": [
-        {
-          "type": "watering|fertilizing|pest_control|harvesting|general",
-          "priority": "low|medium|high|urgent",
-          "description": "Clear, actionable recommendation",
-          "reasoning": "Explanation of why this recommendation is made, including astrological factors if relevant",
-          "confidence": 85
-        }
-      ],
-      "insights": {
-        "growth_trends": ["observation about plant growth patterns"],
-        "weather_impacts": ["how weather affects the plants"],
-        "health_observations": ["plant health insights"],
-        "astrological_influences": ["how current planetary positions may affect farming activities"]
-      },
-      "alerts": [
-        {
-          "type": "warning|info|success",
-          "message": "Important alert message",
-          "plant_id": "optional plant ID if specific to a plant"
-        }
-      ]
-    }
-    
-    CRITICAL: You MUST provide at least 2-3 specific insights in each category, especially in "astrological_influences".
-    Your response MUST be properly formatted JSON without code fences or any explanatory text before or after the JSON.`;
-
-    const userPrompt = `
-    Please analyze the following farm/garden data and provide PERMACULTURE TIPS and recommendations, focusing on sustainable, regenerative practices and considering astrological factors (moon phase and planetary positions):
-
-    PLANTS DATA:
-    ${JSON.stringify(plants, null, 2)}
-
-    CURRENT WEATHER & ASTROLOGICAL DATA (MOON PHASE AND PLANETARY POSITIONS):
-    ${JSON.stringify(weatherForAI, null, 2)} 
-
-    RECENT ACTIVITIES:
-    ${JSON.stringify(activities, null, 2)}
-
-    ${question ? `SPECIFIC QUESTION: ${question}` : ''}
-
-    PROVIDE SPECIFIC PERMACULTURE TIPS INCLUDING:
-    1. Companion planting suggestions for current plants
-    2. Natural pest control and beneficial insect attraction methods
-    3. Soil health improvement techniques (composting, mulching strategies)
-    4. Water conservation and rainwater harvesting opportunities
-    5. Polyculture and guild design recommendations
-    6. Seasonal timing based on current lunar phase and planetary positions
-    7. Seed saving and propagation opportunities
-    8. Wildlife habitat creation suggestions
-
-    IMPORTANT: Your analysis MUST include specific insights about how the current planetary positions and moon phase affect farming activities. Provide timing recommendations for planting, harvesting, pruning, and soil work based on current astrological conditions.
-    
-    Focus on actionable PERMACULTURE recommendations that create resilient, sustainable growing systems.
-    `;
+    // --- ULTRA-MINIMAL PROMPT TEST --- 
+    const systemPrompt = "You are a helpful assistant. Respond with only the word 'OK'.";
+    const userPrompt = "Hello.";
+    console.log('USING ULTRA-MINIMAL PROMPT FOR TESTING');
+    // --- END ULTRA-MINIMAL PROMPT TEST ---
 
     // Call DeepSeek API with retry logic and timeout
-    console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
+    // console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
     
     let aiResponseContent;
     let attempts = 0;
@@ -161,8 +70,8 @@ export async function POST(request: NextRequest) {
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt }
             ],
-            temperature: 0.7,
-            max_tokens: 500, // Drastically reduced max_tokens for testing
+            temperature: 0.1, // Low temperature for deterministic response
+            max_tokens: 10, // Very low max_tokens for minimal response
           },
           {
             headers: {
