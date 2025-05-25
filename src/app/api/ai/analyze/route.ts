@@ -137,6 +137,17 @@ export async function POST(request: NextRequest) {
 
     // Call DeepSeek API with improved error handling and retry logic
     console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
+    console.log('DeepSeek API Key available:', !!apiKey);
+    console.log('System prompt length:', systemPrompt.length);
+    console.log('User prompt length:', userPrompt.length);
+    
+    // Log sample data for debugging
+    if (plants.length > 0) {
+      console.log('Sample plant data:', JSON.stringify(plants[0], null, 2));
+    }
+    if (weatherForAI.length > 0) {
+      console.log('Weather/Astro data:', JSON.stringify(weatherForAI[0], null, 2));
+    }
     
     let response;
     let retryCount = 0;
@@ -145,6 +156,8 @@ export async function POST(request: NextRequest) {
     
     while (retryCount <= maxRetries) {
       try {
+        console.log(`DeepSeek API attempt ${retryCount + 1}/${maxRetries + 1}`);
+        
         // Add timeout to prevent hanging requests
         response = await axios.post(
           'https://api.deepseek.com/v1/chat/completions',
@@ -155,22 +168,32 @@ export async function POST(request: NextRequest) {
               { role: 'user', content: userPrompt }
             ],
             temperature: 0.7,
-            max_tokens: 2000
+            max_tokens: 1500
           },
           {
             headers: {
               'Authorization': `Bearer ${apiKey}`,
               'Content-Type': 'application/json'
             },
-            timeout: 30000 // 30 seconds timeout
+            timeout: 45000 // Increased to 45 seconds timeout
           }
         );
         
+        console.log('DeepSeek API request successful');
         // If we get here, the request was successful
         break;
         
       } catch (apiError) {
         console.error(`DeepSeek API error (attempt ${retryCount + 1}/${maxRetries + 1}):`, apiError);
+        
+        if (axios.isAxiosError(apiError)) {
+          console.error('Axios error details:');
+          console.error('- Status:', apiError.response?.status);
+          console.error('- Status text:', apiError.response?.statusText);
+          console.error('- Data:', apiError.response?.data);
+          console.error('- Code:', apiError.code);
+          console.error('- Message:', apiError.message);
+        }
         
         if (retryCount >= maxRetries) {
           // We've exhausted our retries, throw the error to be caught by the outer catch block

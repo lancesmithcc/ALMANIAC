@@ -214,7 +214,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center">
                     <Brain className="w-5 h-5 mr-2" />
-                    🧠 AI Insights
+                    🌱 Permaculture Tips
                   </h3>
                   <button 
                     onClick={generateNewInsights}
@@ -222,7 +222,7 @@ export default function Dashboard() {
                     className="flex items-center space-x-1 text-sm text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
                   >
                     <RefreshCw className={`w-4 h-4 ${loadingAI ? 'animate-spin' : ''}`} />
-                    <span>{loadingAI ? 'Analyzing...' : 'Generate'}</span>
+                    <span>{loadingAI ? 'Generating tips...' : 'New Tips'}</span>
                   </button>
                 </div>
                 
@@ -248,8 +248,8 @@ export default function Dashboard() {
                 ) : aiRecommendations.length === 0 ? (
                   <div className="text-center py-8">
                     <Brain className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400 mb-2">No AI insights available</p>
-                    <p className="text-gray-500 text-sm">Add some plants and activities to get personalized recommendations</p>
+                    <p className="text-gray-400 mb-2">No permaculture tips available</p>
+                    <p className="text-gray-500 text-sm">Add some plants and activities to get personalized permaculture recommendations</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-80 overflow-y-auto">
