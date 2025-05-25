@@ -10,7 +10,6 @@ function getCurrentZodiacSign(planet: string): string {
   // zodiac signs based on the current date and planet
   const date = new Date();
   const month = date.getMonth(); // 0-11
-  const day = date.getDate();
   
   // Different offsets for different planets to simulate varying positions
   const offsets: Record<string, number> = {
