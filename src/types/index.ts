@@ -4,7 +4,7 @@ export interface Plant {
   id: string;
   plant_type: string;
   variety?: string;
-  planting_date: Date;
+  planting_date: string | Date;
   location: string;
   notes?: string;
   health_status: 'excellent' | 'good' | 'fair' | 'poor';

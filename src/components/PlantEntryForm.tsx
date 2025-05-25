@@ -62,13 +62,16 @@ export default function PlantEntryForm() {
         const transformedPlants = data.plants.map((plant: Plant) => {
           // Ensure planting_date is properly formatted as YYYY-MM-DD
           let formattedDate = '';
-          if (typeof plant.planting_date === 'string') {
-            formattedDate = plant.planting_date.split('T')[0];
-          } else if (plant.planting_date instanceof Date) {
-            formattedDate = plant.planting_date.toISOString().split('T')[0];
+          // Cast planting_date to avoid 'never' type issue
+          const plantingDate = plant.planting_date as unknown as (string | Date);
+          
+          if (typeof plantingDate === 'string') {
+            formattedDate = plantingDate.split('T')[0];
+          } else if (plantingDate instanceof Date) {
+            formattedDate = plantingDate.toISOString().split('T')[0];
           } else {
             // Fallback in case the date is in an unexpected format
-            formattedDate = new Date(plant.planting_date as any).toISOString().split('T')[0];
+            formattedDate = new Date(String(plantingDate)).toISOString().split('T')[0];
           }
           
           return {
