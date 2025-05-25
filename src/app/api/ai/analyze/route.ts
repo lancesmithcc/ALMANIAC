@@ -6,7 +6,8 @@ import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommen
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { question, includeWeather = true, includeActivities = true } = body;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { question: _question, includeWeather = true, includeActivities = true } = body;
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     console.log('API Key check - Key exists:', !!apiKey, 'Key length:', apiKey?.length || 0);
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // --- ULTRA-MINIMAL PROMPT TEST --- 
     const systemPrompt = "You are a helpful assistant. Respond with only the word 'OK'.";
-    const userPrompt = "Hello.";
+    const userPrompt = "Hello."; // This should remain minimal for the test
     console.log('USING ULTRA-MINIMAL PROMPT FOR TESTING');
     // --- END ULTRA-MINIMAL PROMPT TEST ---
 
