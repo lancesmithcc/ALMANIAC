@@ -6,11 +6,6 @@ import {
   Sprout, 
   TrendingUp, 
   Calendar,
-  MapPin,
-  Thermometer,
-  Droplets,
-  Wind,
-  Sun,
   Brain,
   RefreshCw
 } from 'lucide-react';

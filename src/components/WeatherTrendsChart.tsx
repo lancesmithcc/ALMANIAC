@@ -4,19 +4,30 @@ import { useState, useEffect } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar 
 } from 'recharts';
-import { WeatherTrendData, DailyWeatherTrend } from '@/types';
+import { WeatherTrendData } from '@/types';
 import { Loader2, AlertTriangle, Thermometer, Droplets, CloudRain } from 'lucide-react';
 
 interface WeatherTrendsChartProps {
   initialPeriod?: '7' | '30' | '90';
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    dataKey: string;
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 p-3 rounded-lg shadow-lg">
         <p className="label text-sm text-gray-300">{`${label}`}</p>
-        {payload.map((pld: any) => (
+        {payload.map((pld) => (
           <div key={pld.dataKey} style={{ color: pld.color }} className="text-xs flex items-center">
             {pld.dataKey === 'avg_temp' && <Thermometer className="w-3 h-3 mr-1" />}
             {pld.dataKey === 'total_precip' && <CloudRain className="w-3 h-3 mr-1" />}

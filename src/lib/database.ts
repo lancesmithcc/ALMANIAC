@@ -139,7 +139,7 @@ export async function initializeDatabase() {
 export async function createPlant(plant: Omit<Plant, 'id' | 'created_at' | 'updated_at'>) {
   const pool = getDbPool();
   const id = uuidv4();
-  const [result] = await pool.execute(
+  await pool.execute(
     `INSERT INTO plants (id, plant_type, variety, planting_date, location, notes, health_status, stage)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, plant.plant_type, plant.variety || null, plant.planting_date, plant.location, plant.notes || null, plant.health_status, plant.stage]
@@ -181,7 +181,7 @@ export async function deletePlant(id: string) {
 export async function saveWeatherRecord(weather: Omit<WeatherRecord, 'id' | 'created_at'>) {
   const pool = getDbPool();
   const id = uuidv4();
-  const [result] = await pool.execute(
+  await pool.execute(
     `INSERT INTO weather_records (id, location, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, weather.location, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
@@ -202,7 +202,7 @@ export async function getRecentWeather(limit: number = 10): Promise<WeatherRecor
 export async function createActivity(activity: Omit<ActivityLog, 'id' | 'created_at'>) {
   const pool = getDbPool();
   const id = uuidv4();
-  const [result] = await pool.execute(
+  await pool.execute(
     `INSERT INTO activity_logs (id, plant_id, type, description, location, timestamp, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [id, activity.plant_id || null, activity.type, activity.description, activity.location || null, activity.timestamp, activity.notes || null]
@@ -223,7 +223,7 @@ export async function getRecentActivities(limit: number = 20): Promise<ActivityL
 export async function saveAIRecommendation(recommendation: Omit<AIRecommendation, 'id' | 'created_at'>) {
   const pool = getDbPool();
   const id = uuidv4();
-  const [result] = await pool.execute(
+  await pool.execute(
     `INSERT INTO ai_recommendations (id, plant_id, type, recommendation, confidence, priority, weather_factor, expires_at, is_active)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, recommendation.plant_id || null, recommendation.type, recommendation.recommendation, recommendation.confidence, recommendation.priority, recommendation.weather_factor || false, recommendation.expires_at || null, recommendation.is_active]
@@ -246,7 +246,7 @@ export async function getActiveRecommendations(): Promise<AIRecommendation[]> {
 export async function createLocation(location: Omit<Location, 'id' | 'created_at' | 'updated_at'>) {
   const pool = getDbPool();
   const id = uuidv4();
-  const [result] = await pool.execute(
+  await pool.execute(
     `INSERT INTO locations (id, name, description, size, soil_type, light_conditions, irrigation_type)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [id, location.name, location.description || null, location.size || null, location.soil_type || null, location.light_conditions || null, location.irrigation_type || 'manual']
@@ -261,6 +261,26 @@ export async function getLocations(): Promise<Location[]> {
 }
 
 // Dashboard analytics
+interface PlantsCount {
+  total: number;
+}
+
+interface HealthyPlants {
+  healthy: number;
+}
+
+interface NeedsAttention {
+  needs_attention: number;
+}
+
+interface RecentActivities {
+  recent: number;
+}
+
+interface AvgHealth {
+  avg_health: number;
+}
+
 export async function getDashboardStats() {
   const pool = getDbPool();
   
@@ -282,11 +302,11 @@ export async function getDashboardStats() {
     `);
     
     return {
-      total_plants: (plantsCount as any)[0].total,
-      active_plants: (healthyPlants as any)[0].healthy,
-      plants_needing_attention: (needsAttention as any)[0].needs_attention,
-      recent_activities: (recentActivities as any)[0].recent,
-      average_health_score: Math.round((avgHealth as any)[0].avg_health || 0),
+      total_plants: (plantsCount as PlantsCount[])[0].total,
+      active_plants: (healthyPlants as HealthyPlants[])[0].healthy,
+      plants_needing_attention: (needsAttention as NeedsAttention[])[0].needs_attention,
+      recent_activities: (recentActivities as RecentActivities[])[0].recent,
+      average_health_score: Math.round((avgHealth as AvgHealth[])[0].avg_health || 0),
       next_harvest_days: 7, // This would be calculated based on plant stages and growth data
       weather_alerts: 0 // This would be based on weather conditions
     };

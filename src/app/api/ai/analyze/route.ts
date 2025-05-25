@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { DeepSeekAnalysisRequest, DeepSeekAnalysisResponse } from '@/types';
+import { DeepSeekAnalysisResponse } from '@/types';
 import { getPlants, getRecentWeather, getRecentActivities, saveAIRecommendation, getActiveRecommendations } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       if (recommendation.priority === 'high' || recommendation.priority === 'urgent') {
         try {
           await saveAIRecommendation({
-            type: recommendation.type as any,
+            type: recommendation.type as 'watering' | 'fertilizing' | 'pest_control' | 'harvesting' | 'general',
             recommendation: recommendation.description,
             confidence: recommendation.confidence,
             priority: recommendation.priority,
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get recent AI recommendations
     const recommendations = await getActiveRecommendations();

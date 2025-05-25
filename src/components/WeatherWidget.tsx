@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Thermometer, 
   Droplets, 
@@ -10,9 +10,7 @@ import {
   CloudRain,
   MapPin,
   RefreshCw,
-  Calendar,
-  Sunrise,
-  Sunset
+  Calendar
 } from 'lucide-react';
 import { WeatherData } from '@/types';
 
@@ -28,17 +26,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
   const [showLocationSettings, setShowLocationSettings] = useState(false);
   const [manualLocation, setManualLocation] = useState<string>('');
 
-  useEffect(() => {
-    // Check if there's a saved manual location
-    const savedLocation = localStorage.getItem('almaniac-location');
-    if (savedLocation) {
-      setManualLocation(savedLocation);
-      setLocationMethod('manual');
-    }
-    fetchWeatherData();
-  }, []);
-
-  const getUserLocation = (): Promise<{ lat: number; lon: number } | null> => {
+  const getUserLocation = useCallback((): Promise<{ lat: number; lon: number } | null> => {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
         console.log('Geolocation not supported, falling back to IP location');
@@ -64,9 +52,9 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
         }
       );
     });
-  };
+  }, []);
 
-  const fetchWeatherData = async () => {
+  const fetchWeatherData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -104,7 +92,17 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
     } finally {
       setLoading(false);
     }
-  };
+  }, [getUserLocation]);
+
+  useEffect(() => {
+    // Check if there's a saved manual location
+    const savedLocation = localStorage.getItem('almaniac-location');
+    if (savedLocation) {
+      setManualLocation(savedLocation);
+      setLocationMethod('manual');
+    }
+    fetchWeatherData();
+  }, [fetchWeatherData]);
 
   const handleSaveLocation = () => {
     if (manualLocation.trim()) {
