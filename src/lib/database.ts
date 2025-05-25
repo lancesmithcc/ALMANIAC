@@ -162,8 +162,8 @@ export async function getPlantById(id: string): Promise<Plant | null> {
 
 export async function updatePlant(id: string, updates: Partial<Plant>) {
   const pool = getDbPool();
-  const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at' && key !== 'updated_at');
-  const values = fields.map(field => (updates as Record<string, any>)[field]);
+  const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at' && key !== 'updated_at') as Array<keyof Plant>;
+  const values = fields.map(field => updates[field]);
   const setClause = fields.map(field => `${field} = ?`).join(', ');
   
   await pool.execute(
