@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { 
   Thermometer, 
   Droplets, 
@@ -377,12 +378,13 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
               return (
                 <div key={day.date} className="text-center">
                   <p className="text-xs text-gray-500 mb-1">{dayName}</p>
-                  <div className="flex justify-center mb-1">
+                  <div className="flex justify-center mb-1 w-6 h-6 relative">
                     {day.icon ? (
-                      <img 
+                      <Image 
                         src={`https:${day.icon}`} 
                         alt={day.description}
-                        className="w-6 h-6"
+                        layout="fill"
+                        objectFit="contain"
                       />
                     ) : (
                       <div className="w-6 h-6 flex items-center justify-center">
@@ -444,12 +446,13 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
                         <p className="text-xs text-gray-500 mb-3">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                         
                         {/* Weather Icon */}
-                        <div className="flex justify-center mb-3">
+                        <div className="flex justify-center mb-3 w-12 h-12 relative">
                           {day.icon ? (
-                            <img 
+                            <Image 
                               src={`https:${day.icon}`} 
                               alt={day.description}
-                              className="w-12 h-12"
+                              layout="fill"
+                              objectFit="contain"
                             />
                           ) : (
                             getWeatherIcon(day.condition)

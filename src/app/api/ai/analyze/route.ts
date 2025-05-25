@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { DeepSeekAnalysisResponse } from '@/types';
-import { getPlants, getRecentWeather, getRecentActivities, saveAIRecommendation, getActiveRecommendations } from '@/lib/database';
+import { DeepSeekAnalysisResponse, WeatherData } from '@/types';
+import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommendations } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,18 +19,21 @@ export async function POST(request: NextRequest) {
     // Gather data for analysis
     const plants = await getPlants();
     // Fetch weather data including astro for the current day from our /api/weather endpoint
-    let weatherForAI: any[] = []; // Use a more specific type if available for weather data sent to AI
+    let weatherForAI: Array<{
+      current: Partial<Pick<WeatherData, 'temperature' | 'humidity' | 'windSpeed' | 'condition' | 'description' | 'uv' | 'feelsLike'>>;
+      astro: WeatherData['astro'];
+    }> = [];
     if (includeWeather) {
       try {
         const weatherResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`);
         if (weatherResponse.ok) {
-          const weatherData = await weatherResponse.json();
+          const weatherData: WeatherData = await weatherResponse.json();
           // We want current conditions and moon phase for the AI
           weatherForAI = [{
             current: {
               temperature: weatherData.temperature,
               humidity: weatherData.humidity,
-              wind_speed: weatherData.windSpeed,
+              windSpeed: weatherData.windSpeed,
               condition: weatherData.condition,
               description: weatherData.description,
               uv: weatherData.uv,
