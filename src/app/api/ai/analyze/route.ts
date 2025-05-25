@@ -6,6 +6,7 @@ import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommen
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { question: _question, includeWeather = true, includeActivities = true } = body;
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
           // console.error('Failed to fetch detailed weather for AI. Body:', errorBody);
         }
       } catch (_fetchErr) {
-        // console.error('Error fetching weather for AI (exception):', fetchErr);
+        // console.error('Error fetching weather for AI (exception):', _fetchErr);
       }
     }
     const activities = includeActivities ? await getRecentActivities(20) : [];
