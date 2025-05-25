@@ -140,6 +140,9 @@ export interface WeatherApiResponse {
         moonset: string;
         moon_phase: string;
         moon_illumination: string;
+        is_moon_up?: number;
+        is_sun_up?: number;
+        planetary_positions?: Record<string, string>;
       };
       hour: Array<{
         time_epoch: number;
@@ -216,19 +219,9 @@ export interface WeatherData {
     moonset: string;
     moon_phase: string;
     moon_illumination: string;
-    // Additional astrological information
-    planetary_positions?: {
-      sun: string;      // Zodiac sign (e.g., "Aries", "Taurus")
-      moon: string;     // Zodiac sign
-      mercury: string;  // Zodiac sign
-      venus: string;    // Zodiac sign
-      mars: string;     // Zodiac sign
-      jupiter: string;  // Zodiac sign
-      saturn: string;   // Zodiac sign
-      uranus: string;   // Zodiac sign
-      neptune: string;  // Zodiac sign
-      pluto: string;    // Zodiac sign
-    };
+    is_moon_up?: number;
+    is_sun_up?: number;
+    planetary_positions?: Record<string, string>;
   };
 }
 
