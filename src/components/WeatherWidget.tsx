@@ -138,6 +138,24 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
       return <Sun className="w-8 h-8 text-yellow-400" />;
     }
   };
+  
+  // Function to return astrological symbols for planets
+  const getAstrologySymbol = (planet: string): string => {
+    const symbols: Record<string, string> = {
+      sun: '☉',
+      moon: '☽',
+      mercury: '☿',
+      venus: '♀',
+      mars: '♂',
+      jupiter: '♃',
+      saturn: '♄',
+      uranus: '♅',
+      neptune: '♆',
+      pluto: '♇'
+    };
+    
+    return symbols[planet] || planet.charAt(0).toUpperCase();
+  };
 
   const getLocationBadge = () => {
     switch (locationMethod) {
@@ -355,11 +373,35 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
               <div>
                 <p className="text-sm text-gray-400">Moon Phase</p>
                 <p className="text-lg font-semibold text-indigo-400">{weather.astro.moon_phase}</p>
-                {weather.astro.moon_illumination && (
-                  <p className="text-xs text-gray-500">Illumination: {weather.astro.moon_illumination}%</p>
-                )}
+                {(() => {
+                  const illumination = weather.astro?.moon_illumination;
+                  if (illumination !== undefined && illumination !== null && illumination !== '') {
+                    return <p className="text-xs text-gray-500">Illumination: {illumination}%</p>;
+                  }
+                  return null;
+                })()}
               </div>
               <Moon className="w-8 h-8 text-indigo-400" />
+            </div>
+          </div>
+        )}
+        
+        {/* Planetary Positions - New Card */}
+        {weather?.astro?.planetary_positions && (
+          <div className="bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20 rounded-lg p-4 md:col-span-2 lg:col-span-4 mt-4">
+            <p className="text-sm text-gray-400 mb-3">Planetary Positions</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {Object.entries(weather.astro.planetary_positions).map(([planet, sign]) => (
+                <div key={planet} className="bg-gray-800/30 rounded-lg p-2 text-center">
+                  <div className="flex items-center justify-center mb-1">
+                    <div className="w-6 h-6 flex items-center justify-center text-lg">
+                      {getAstrologySymbol(planet)}
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-gray-300 capitalize">{planet}</p>
+                  <p className="text-xs text-purple-400">{sign}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}

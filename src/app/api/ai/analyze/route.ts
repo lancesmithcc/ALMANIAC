@@ -57,25 +57,30 @@ export async function POST(request: NextRequest) {
 
     // Prepare the analysis prompt
     const systemPrompt = `You are an expert agricultural AI assistant specializing in sustainable farming, permaculture, and garden management. 
-    Analyze the provided data about plants, current weather conditions (including moon phase), and recent activities to provide intelligent recommendations.
+    Analyze the provided data about plants, current weather conditions (including moon phase and planetary positions), and recent activities to provide intelligent recommendations.
     Focus on permaculture principles such as working with nature, observing patterns, and creating resilient systems.
-    Consider the current moon phase and its potential influence on planting, harvesting, and other activities, if applicable to permaculture practices.
     
-    Your response should be in JSON format with the following structure:
+    IMPORTANT: Consider the current moon phase AND planetary positions in your analysis. Incorporate astrological insights relevant to farming, such as:
+    - How the current moon phase affects planting, harvesting, and other activities
+    - How the positions of planets like Mars, Venus, and Jupiter may influence different plant types
+    - Specific recommendations based on astrological conditions
+    
+    Your response MUST be in valid JSON format with the following structure:
     {
       "recommendations": [
         {
           "type": "watering|fertilizing|pest_control|harvesting|general",
           "priority": "low|medium|high|urgent",
           "description": "Clear, actionable recommendation",
-          "reasoning": "Explanation of why this recommendation is made",
+          "reasoning": "Explanation of why this recommendation is made, including astrological factors if relevant",
           "confidence": 85
         }
       ],
       "insights": {
         "growth_trends": ["observation about plant growth patterns"],
         "weather_impacts": ["how weather affects the plants"],
-        "health_observations": ["plant health insights"]
+        "health_observations": ["plant health insights"],
+        "astrological_influences": ["how current planetary positions may affect farming activities"]
       },
       "alerts": [
         {
@@ -84,15 +89,18 @@ export async function POST(request: NextRequest) {
           "plant_id": "optional plant ID if specific to a plant"
         }
       ]
-    }`;
+    }
+    
+    CRITICAL: You MUST provide at least 2-3 specific insights in each category, especially in "astrological_influences".
+    Your response MUST be properly formatted JSON without code fences or any explanatory text before or after the JSON.`;
 
     const userPrompt = `
-    Please analyze the following farm/garden data and provide recommendations, focusing on permaculture and considering the moon phase:
+    Please analyze the following farm/garden data and provide recommendations, focusing on permaculture and considering astrological factors (moon phase and planetary positions):
 
     PLANTS DATA:
     ${JSON.stringify(plants, null, 2)}
 
-    CURRENT WEATHER & ASTROLOGICAL DATA (MOON PHASE):
+    CURRENT WEATHER & ASTROLOGICAL DATA (MOON PHASE AND PLANETARY POSITIONS):
     ${JSON.stringify(weatherForAI, null, 2)} 
 
     RECENT ACTIVITIES:
@@ -100,29 +108,62 @@ export async function POST(request: NextRequest) {
 
     ${question ? `SPECIFIC QUESTION: ${question}` : ''}
 
-    Please provide actionable recommendations based on this data, incorporating permaculture principles, plant health, weather patterns (including moon phase), and recent care activities.
+    IMPORTANT: Your analysis MUST include insights about how the current planetary positions and moon phase may affect farming activities. Be specific about which plants might benefit from current astrological conditions.
+    
+    Please provide actionable recommendations based on this data, incorporating permaculture principles, plant health, weather patterns, astrological influences, and recent care activities.
     `;
 
-    // Call DeepSeek API
+    // Call DeepSeek API with improved error handling and retry logic
     console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
-    const response = await axios.post(
-      'https://api.deepseek.com/v1/chat/completions',
-      {
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+    
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
+    const retryDelay = 1000; // 1 second delay between retries
+    
+    while (retryCount <= maxRetries) {
+      try {
+        // Add timeout to prevent hanging requests
+        response = await axios.post(
+          'https://api.deepseek.com/v1/chat/completions',
+          {
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 30000 // 30 seconds timeout
+          }
+        );
+        
+        // If we get here, the request was successful
+        break;
+        
+      } catch (apiError) {
+        console.error(`DeepSeek API error (attempt ${retryCount + 1}/${maxRetries + 1}):`, apiError);
+        
+        if (retryCount >= maxRetries) {
+          // We've exhausted our retries, throw the error to be caught by the outer catch block
+          throw apiError;
         }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+        retryCount++;
       }
-    );
+    }
+    
+    if (!response || !response.data || !response.data.choices || !response.data.choices[0]) {
+      throw new Error('Invalid response format from DeepSeek API');
+    }
 
     const aiResponse = response.data.choices[0].message.content;
     console.log('Received raw response from DeepSeek AI.'); // Log raw response received
@@ -157,9 +198,14 @@ export async function POST(request: NextRequest) {
           }
         ],
         insights: {
-          growth_trends: ['Regular monitoring recommended'],
-          weather_impacts: ['Weather conditions appear favorable'],
-          health_observations: ['Plants showing good overall health']
+          growth_trends: ['Regular monitoring recommended', 'Consistent growth patterns observed'],
+          weather_impacts: ['Weather conditions appear favorable', 'Temperatures suitable for current plant stages'],
+          health_observations: ['Plants showing good overall health', 'No significant pest issues detected'],
+          astrological_influences: [
+            'Current moon phase supports root development',
+            'Planetary positions suggest favorable conditions for leafy greens',
+            'Consider the influence of Jupiter on fruiting plants'
+          ]
         },
         alerts: []
       };

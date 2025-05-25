@@ -216,6 +216,19 @@ export interface WeatherData {
     moonset: string;
     moon_phase: string;
     moon_illumination: string;
+    // Additional astrological information
+    planetary_positions?: {
+      sun: string;      // Zodiac sign (e.g., "Aries", "Taurus")
+      moon: string;     // Zodiac sign
+      mercury: string;  // Zodiac sign
+      venus: string;    // Zodiac sign
+      mars: string;     // Zodiac sign
+      jupiter: string;  // Zodiac sign
+      saturn: string;   // Zodiac sign
+      uranus: string;   // Zodiac sign
+      neptune: string;  // Zodiac sign
+      pluto: string;    // Zodiac sign
+    };
   };
 }
 
@@ -238,6 +251,7 @@ export interface DeepSeekAnalysisResponse {
     growth_trends: string[];
     weather_impacts: string[];
     health_observations: string[];
+    astrological_influences: string[];
   };
   alerts: {
     type: 'warning' | 'info' | 'success';
