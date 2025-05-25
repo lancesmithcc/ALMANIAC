@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
               { role: 'user', content: userPrompt }
             ],
             temperature: 0.7,
-            max_tokens: 1500, // Slightly reduced max_tokens as a test
+            max_tokens: 500, // Drastically reduced max_tokens for testing
           },
           {
             headers: {
