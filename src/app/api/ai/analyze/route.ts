@@ -27,7 +27,11 @@ export async function POST(request: NextRequest) {
     }> = [];
     if (includeWeather) {
       try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`;
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                        process.env.URL || 
+                        'http://localhost:3000';
+        const apiUrl = `${baseUrl}/api/weather?location=auto:ip&forecast=true`;
         console.log('Fetching weather for AI from:', apiUrl); // Log API URL
         const weatherResponse = await fetch(apiUrl);
         if (weatherResponse.ok) {
