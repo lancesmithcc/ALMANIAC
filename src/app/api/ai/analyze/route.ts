@@ -9,9 +9,11 @@ export async function POST(request: NextRequest) {
     const { question, includeWeather = true, includeActivities = true } = body;
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
+    console.log('API Key check - Key exists:', !!apiKey, 'Key length:', apiKey?.length || 0);
     if (!apiKey) {
+      console.error('DEEPSEEK_API_KEY environment variable not configured');
       return NextResponse.json(
-        { error: 'DeepSeek API key not configured' },
+        { error: 'DeepSeek API key not configured. Please set DEEPSEEK_API_KEY environment variable.' },
         { status: 500 }
       );
     }
@@ -190,9 +192,11 @@ export async function POST(request: NextRequest) {
           console.error('Axios error details:');
           console.error('- Status:', apiError.response?.status);
           console.error('- Status text:', apiError.response?.statusText);
-          console.error('- Data:', apiError.response?.data);
+          console.error('- Data:', JSON.stringify(apiError.response?.data, null, 2));
           console.error('- Code:', apiError.code);
           console.error('- Message:', apiError.message);
+          console.error('- Request URL:', apiError.config?.url);
+          console.error('- Request method:', apiError.config?.method);
         }
         
         if (retryCount >= maxRetries) {
