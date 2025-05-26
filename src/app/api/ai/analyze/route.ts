@@ -3,7 +3,7 @@ import axios from 'axios';
 import { DeepSeekAnalysisResponse, WeatherData, AIRecommendation } from '@/types';
 import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommendations } from '@/lib/database';
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -14,8 +14,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { question: _question, includeWeather = true, includeActivities = true } = body;
+    const { question = null, includeWeather = true, includeActivities = true } = body;
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     console.log('API Key check - Key exists:', !!apiKey, 'Key length:', apiKey?.length || 0);
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Construct a more detailed user prompt based on available data
     const userPromptParts = [
-        _question || "Provide a general analysis and recommendations for my farm based on the latest data.",
+        question || "Provide a general analysis and recommendations for my farm based on the latest data.",
         `Current Plants: ${plants.length > 0 ? plants.map(p => `${p.plant_type} (${p.variety || 'N/A'}, Stage: ${p.stage}, Health: ${p.health_status})`).join('; ') : 'No plants logged.'}`,
         `Weather: ${weatherForAI.length > 0 && weatherForAI[0].current && weatherForAI[0].astro ? 
           `Temp: ${weatherForAI[0].current.temperature}°C, Humidity: ${weatherForAI[0].current.humidity}%, Condition: ${weatherForAI[0].current.description}, Moon Phase: ${weatherForAI[0].astro.moon_phase} (Illumination: ${weatherForAI[0].astro.moon_illumination}%)` 
@@ -253,7 +252,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

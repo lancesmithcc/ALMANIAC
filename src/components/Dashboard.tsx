@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sun, Moon, BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart } from 'lucide-react';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import WeatherWidget from './WeatherWidget';
 import PlantEntryForm from '@/components/PlantEntryForm';

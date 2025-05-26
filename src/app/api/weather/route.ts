@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { WeatherApiResponse, ForecastDay } from '@/types';
 import { saveWeatherRecord } from '@/lib/database';
-import { WeatherData, WeatherRecord } from '@/types';
+import { WeatherRecord } from '@/types';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 // Helper function to determine zodiac sign based on planet position
 // In a real implementation, this would fetch data from an astrological API
