@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     Prioritize permaculture principles, soil health, water conservation, and biodiversity. Consider the current moon phase and astrological data in your timing and task suggestions.`;
 
     // Construct a more detailed user prompt based on available data
-    let userPromptParts = [
+    const userPromptParts = [
         _question || "Provide a general analysis and recommendations for my farm based on the latest data.",
         `Current Plants: ${plants.length > 0 ? plants.map(p => `${p.plant_type} (${p.variety || 'N/A'}, Stage: ${p.stage}, Health: ${p.health_status})`).join('; ') : 'No plants logged.'}`,
         `Weather: ${weatherForAI.length > 0 && weatherForAI[0].current && weatherForAI[0].astro ? 
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

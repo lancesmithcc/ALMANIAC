@@ -40,6 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
     }
 
     // Exclude user_id, id, created_at, updated_at from updates
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { user_id, id, created_at, updated_at, ...validUpdates } = body;
 
     if (validUpdates.planting_date) {
