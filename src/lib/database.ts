@@ -62,6 +62,7 @@ export const createTablesSQL = `
   CREATE TABLE IF NOT EXISTS weather_records (
     id VARCHAR(36) PRIMARY KEY,
     location VARCHAR(200) NOT NULL,
+    user_id VARCHAR(36),
     temperature DECIMAL(5,2) NOT NULL,
     humidity INT NOT NULL,
     wind_speed DECIMAL(5,2) NOT NULL,
@@ -71,7 +72,8 @@ export const createTablesSQL = `
     recorded_at DATETIME NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_location (location),
-    INDEX idx_recorded_at (recorded_at)
+    INDEX idx_recorded_at (recorded_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
   );
 
   -- Activity logs table
@@ -248,9 +250,9 @@ export async function saveWeatherRecord(weather: Omit<WeatherRecord, 'id' | 'cre
   const pool = getDbPool();
   const id = uuidv4();
   await pool.execute(
-    `INSERT INTO weather_records (id, location, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, weather.location, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
+    `INSERT INTO weather_records (id, location, user_id, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, weather.location, weather.user_id || null, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
   );
   return id;
 }

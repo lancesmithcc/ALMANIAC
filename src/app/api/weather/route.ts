@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { WeatherApiResponse, ForecastDay } from '@/types';
 import { saveWeatherRecord } from '@/lib/database';
+import { WeatherData, WeatherRecord } from '@/types';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Helper function to determine zodiac sign based on planet position
 // In a real implementation, this would fetch data from an astrological API
@@ -169,36 +172,31 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { location, temperature, humidity, wind_speed, precipitation, condition, description } = body;
-
-    // Validate required fields
-    if (!location || temperature === undefined || humidity === undefined || wind_speed === undefined) {
-      return NextResponse.json(
-        { error: 'Missing required weather data fields' },
-        { status: 400 }
-      );
+    if (!body.location || typeof body.temperature !== 'number' || typeof body.humidity !== 'number' || typeof body.wind_speed !== 'number' || !body.condition) {
+      return NextResponse.json({ error: 'Missing required fields or invalid data types' }, { status: 400 });
     }
 
-    // Save manual weather entry to database
-    const weatherRecord = await saveWeatherRecord({
-      location,
-      temperature,
-      humidity,
-      wind_speed,
-      precipitation: precipitation || 0,
-      condition: condition || 'manual-entry',
-      description: description || 'Manual weather entry',
-      recorded_at: new Date()
-    });
+    const weatherRecord: Omit<WeatherRecord, 'id' | 'created_at'> = {
+      location: body.location,
+      user_id: session.user.id,
+      temperature: body.temperature,
+      humidity: body.humidity,
+      wind_speed: body.wind_speed,
+      precipitation: body.precipitation || 0,
+      condition: body.condition,
+      description: body.description || '',
+      recorded_at: body.recorded_at ? new Date(body.recorded_at) : new Date(),
+    };
 
-    return NextResponse.json({
-      success: true,
-      id: weatherRecord,
-      message: 'Weather data saved successfully'
-    });
-
+    const recordId = await saveWeatherRecord(weatherRecord);
+    return NextResponse.json({ success: true, id: recordId, message: 'Weather record created' });
   } catch (error) {
     console.error('Error saving weather data:', error);
     return NextResponse.json(

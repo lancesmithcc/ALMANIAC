@@ -1,339 +1,153 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  CloudRain, 
-  Sprout, 
-  TrendingUp, 
-  Calendar,
-  Brain,
-  RefreshCw
-} from 'lucide-react';
+import { Sun, Moon, BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart } from 'lucide-react';
+import { useSession, signIn, signOut } from 'next-auth/react';
+import Link from 'next/link';
 import WeatherWidget from './WeatherWidget';
 import PlantEntryForm from '@/components/PlantEntryForm';
-import AnalyticsCards from '@/components/AnalyticsCards';
-import RecentEntries from '@/components/RecentEntries';
-import WeatherTrendsChart from '@/components/WeatherTrendsChart';
-import { AIRecommendation } from '@/types';
+import AnalyticsCards from './AnalyticsCards';
+import RecentEntries from './RecentEntries';
+import AIInsights from './AIInsights';
+import WeatherTrendsChart from './WeatherTrendsChart';
+import ThreeDayForecast from '@/components/ThreeDayForecast';
+
+const navItems = [
+  { name: 'Overview', icon: AreaChart },
+  { name: 'Plants & Land', icon: Leaf },
+  { name: 'Weather', icon: Cloud },
+  { name: 'Analytics', icon: BarChart2 },
+  { name: 'AI Insights', icon: Brain },
+  { name: 'Community', icon: Users, comingSoon: true },
+  { name: 'Calendar', icon: CalendarDays, comingSoon: true },
+  { name: 'Settings', icon: Settings, comingSoon: true },
+  { name: 'Help & Support', icon: HelpCircle, comingSoon: true },
+];
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
-  const [loadingAI, setLoadingAI] = useState(true);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [currentDate, setCurrentDate] = useState('');
+  const { data: session, status } = useSession();
+  const isLoadingSession = status === 'loading';
 
   useEffect(() => {
-    if (activeTab === 'overview') {
-      fetchAIRecommendations();
-    }
-  }, [activeTab]);
+    const today = new Date();
+    setCurrentDate(today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+  }, []);
 
-  const fetchAIRecommendations = async () => {
-    try {
-      setLoadingAI(true);
-      setAiError(null);
-      
-      // First trigger new analysis
-      const analysisResponse = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: "Provide permaculture tips and recommendations based on my current garden conditions.",
-          includeWeather: true,
-          includeActivities: true
-        })
-      });
-      
-      if (!analysisResponse.ok) {
-        throw new Error('Failed to generate AI analysis');
-      }
-      
-      // Then get saved recommendations
-      const response = await fetch('/api/ai/analyze');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch AI recommendations');
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setAiRecommendations(data.recommendations);
-      }
-    } catch (err) {
-      console.error('Error fetching AI recommendations:', err);
-      setAiError('Failed to load AI insights');
-    } finally {
-      setLoadingAI(false);
-    }
-  };
-
-  const generateNewInsights = async () => {
-    try {
-      setLoadingAI(true);
-      setAiError(null);
-      
-      // Trigger new AI analysis
-      const response = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: "Provide fresh permaculture tips and sustainable farming recommendations based on my current garden conditions, weather, and lunar phase.",
-          includeWeather: true,
-          includeActivities: true
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate insights');
-      }
-      
-      // Fetch updated recommendations
-      await fetchAIRecommendations();
-    } catch (err) {
-      console.error('Error generating insights:', err);
-      setAiError('Failed to generate new insights');
-      setLoadingAI(false);
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-500/10 border-red-500/20 text-red-400';
-      case 'high':
-        return 'bg-orange-500/10 border-orange-500/20 text-orange-400';
-      case 'medium':
-        return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
-      case 'low':
-        return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'Overview':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <AnalyticsCards />
+              <ThreeDayForecast /> 
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              <WeatherWidget />
+              <RecentEntries />
+            </div>
+          </div>
+        );
+      case 'Plants & Land':
+        return <PlantEntryForm />;
+      case 'Weather':
+        return (
+          <div className="space-y-6">
+            <WeatherWidget detailed={true} /> 
+            <ThreeDayForecast expanded />
+          </div>
+        );
+      case 'Analytics':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-emerald-400">Farm Analytics</h2>
+            <WeatherTrendsChart />
+          </div>
+        );
+      case 'AI Insights':
+        return <AIInsights />;
       default:
-        return 'bg-gray-500/10 border-gray-500/20 text-gray-400';
-    }
-  };
-
-  const getPriorityEmoji = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return '🚨';
-      case 'high': return '⚠️';
-      case 'medium': return '💡';
-      case 'low': return 'ℹ️';
-      default: return '📝';
-    }
-  };
-
-  const getTypeEmoji = (type: string) => {
-    switch (type) {
-      case 'watering': return '💧';
-      case 'fertilizing': return '🌿';
-      case 'pest_control': return '🛡️';
-      case 'harvesting': return '🌾';
-      case 'general': return '🧠';
-      default: return '📝';
+        return <p>Welcome to Almaniac! Select a tab to get started.</p>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950">
-      {/* Header */}
-      <header className="border-b border-gray-800/50 bg-gray-950/50 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-lg flex items-center justify-center">
-                <Sprout className="w-6 h-6 text-gray-900" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                  Almaniac
-                </h1>
-                <p className="text-sm text-gray-400">Smart Farming Dashboard</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Welcome back! 👋</p>
-                <p className="text-sm font-medium">{new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-950 text-gray-100 flex flex-col items-center p-4 md:p-6 selection:bg-emerald-500 selection:text-white">
+      <header className="w-full max-w-7xl mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+        <div className="flex items-center space-x-3">
+          <Leaf className="h-10 w-10 text-emerald-400" />
+          <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-green-500">
+            Almaniac
+          </h1>
+        </div>
+        <div className="text-right">
+          <p className="text-base md:text-lg text-gray-300 mb-1">{currentDate}</p>
+          <div className="mt-1 flex items-center justify-end space-x-3 text-sm">
+            {isLoadingSession ? (
+              <p className="text-gray-400">Loading user...</p>
+            ) : session?.user ? (
+              <>
+                <UserCircle className="h-5 w-5 text-emerald-400" />
+                <span className="text-gray-200">Hi, {session.user.username || session.user.name}</span>
+                <button 
+                  onClick={() => signOut({ callbackUrl: '/login' })} 
+                  className="text-red-400 hover:text-red-300 flex items-center transition-colors duration-150"
+                  title="Log Out"
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-emerald-400 hover:text-emerald-300 flex items-center transition-colors duration-150">
+                  <LogIn className="h-4 w-4 mr-1" />
+                  Log In
+                </Link>
+                <Link href="/signup" className="text-sky-400 hover:text-sky-300 flex items-center transition-colors duration-150">
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Navigation */}
-      <nav className="border-b border-gray-800/50 bg-gray-950/30">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex space-x-8">
-            {[
-              { id: 'overview', label: 'Overview', icon: TrendingUp },
-              { id: 'plants', label: 'Plants & Land', icon: Sprout },
-              { id: 'weather', label: 'Weather', icon: CloudRain },
-              { id: 'analytics', label: 'Analytics', icon: Calendar },
-            ].map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex items-center space-x-2 py-4 px-2 border-b-2 transition-colors ${
-                  activeTab === id
-                    ? 'border-emerald-400 text-emerald-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="font-medium">{label}</span>
-              </button>
-            ))}
-          </div>
+      {/* Navigation Tabs */}
+      <nav className="w-full max-w-7xl bg-gray-800/30 backdrop-blur-md shadow-lg rounded-xl mb-6 md:mb-8 overflow-x-auto">
+        <div className="flex space-x-1 p-2 min-w-max">
+          {navItems.map((item) => (
+            <button
+              key={item.name}
+              onClick={() => !item.comingSoon && setActiveTab(item.name)}
+              className={`flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out 
+                ${item.comingSoon ? 'text-gray-500 cursor-not-allowed' : 
+                  activeTab === item.name 
+                  ? 'bg-emerald-500 text-white shadow-md' 
+                  : 'text-gray-300 hover:bg-gray-700/60 hover:text-emerald-300'}
+              `}
+              title={item.comingSoon ? `${item.name} (Coming Soon)` : item.name}
+              disabled={item.comingSoon}
+            >
+              <item.icon className={`h-5 w-5 mr-2 ${item.comingSoon ? '' : activeTab === item.name ? '' : 'text-emerald-400'}`} />
+              {item.name}
+              {item.comingSoon && <span className="ml-2 text-xs bg-gray-600 text-gray-400 px-1.5 py-0.5 rounded-full">Soon</span>}
+            </button>
+          ))}
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Weather Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <WeatherWidget />
-              </div>
-              <div className="space-y-6">
-                <AnalyticsCards />
-              </div>
-            </div>
-
-            {/* Recent Activity and AI Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <RecentEntries />
-              
-              {/* AI Insights */}
-              <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <Brain className="w-5 h-5 mr-2" />
-                    🌱 Permaculture Tips
-                  </h3>
-                  <button 
-                    onClick={generateNewInsights}
-                    disabled={loadingAI}
-                    className="flex items-center space-x-1 text-sm text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${loadingAI ? 'animate-spin' : ''}`} />
-                    <span>{loadingAI ? 'Generating tips...' : 'New Tips'}</span>
-                  </button>
-                </div>
-                
-                {loadingAI ? (
-                  <div className="space-y-3">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="p-4 bg-gray-800/30 rounded-lg animate-pulse">
-                        <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-700 rounded w-full"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : aiError ? (
-                  <div className="text-center py-4">
-                    <p className="text-orange-400 mb-2">{aiError}</p>
-                    <button 
-                      onClick={fetchAIRecommendations}
-                      className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : aiRecommendations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Brain className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400 mb-2">No permaculture tips available</p>
-                    <p className="text-gray-500 text-sm">Add some plants and activities to get personalized permaculture recommendations</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {aiRecommendations.slice(0, 3).map((rec) => (
-                      <div
-                        key={rec.id}
-                        className={`p-4 rounded-lg border ${getPriorityColor(rec.priority)}`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm">{getPriorityEmoji(rec.priority)}</span>
-                            <span className="text-sm">{getTypeEmoji(rec.type)}</span>
-                            <p className="text-sm font-medium capitalize">
-                              {rec.type.replace('_', ' ')} • {rec.priority}
-                            </p>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {rec.confidence}% confidence
-                          </span>
-                        </div>
-                        <p className="text-gray-300 text-sm">
-                          {rec.recommendation}
-                        </p>
-                        {rec.expires_at && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            Expires: {new Date(rec.expires_at).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                    
-                    {aiRecommendations.length > 3 && (
-                      <div className="text-center pt-2">
-                        <p className="text-xs text-gray-500">
-                          +{aiRecommendations.length - 3} more recommendations available
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'plants' && (
-          <div className="space-y-8">
-            <PlantEntryForm />
-          </div>
-        )}
-
-        {activeTab === 'weather' && (
-          <div className="space-y-8">
-            <WeatherWidget detailed />
-          </div>
-        )}
-
-        {activeTab === 'analytics' && (
-          <div className="space-y-8">
-            <h2 className="text-2xl font-semibold text-white">Farm Analytics</h2>
-            
-            {/* Placeholder for other analytics sections if any */}
-            {/* For example, overall farm health, yield predictions, etc. */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-800/50">
-                <h3 className="text-lg font-medium text-emerald-400 mb-3">Overall Farm Health</h3>
-                 Content 
-              </div>
-              <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-800/50">
-                <h3 className="text-lg font-medium text-emerald-400 mb-3">Yield Projections</h3>
-                 Content 
-              </div>
-            </div> */}
-
-            <WeatherTrendsChart />
-
-            <div className="text-center py-12 mt-8 bg-gray-900/30 backdrop-blur-sm rounded-xl border border-gray-800/50">
-              <TrendingUp className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-400 mb-2">More Analytics Coming Soon</h3>
-              <p className="text-gray-500">We are working on providing more detailed insights into your farm&apos;s performance.</p>
-            </div>
-          </div>
-        )}
+      {/* Main Content Area */}
+      <main className="w-full max-w-7xl flex-grow">
+        {renderContent()}
       </main>
+
+      <footer className="w-full max-w-7xl mt-8 py-6 text-center text-gray-500 text-sm border-t border-gray-700/50">
+        <p>&copy; {new Date().getFullYear()} Almaniac. Cultivating Intelligence.</p>
+      </footer>
     </div>
   );
 } 

@@ -23,7 +23,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.3",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^3.25.29"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

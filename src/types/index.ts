@@ -17,6 +17,7 @@ export interface Plant {
 export interface WeatherRecord {
   id: string;
   location: string;
+  user_id?: string;
   temperature: number;
   humidity: number;
   wind_speed: number;

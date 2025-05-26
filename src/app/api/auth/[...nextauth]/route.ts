@@ -1,16 +1,8 @@
 import NextAuth, { AuthOptions, User as NextAuthUser } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { getDbPool } from '@/lib/database'; // We'll add getUserByUsername soon
+import { getUserByUsername } from '@/lib/database'; // Use this instead of local definition
 import bcrypt from 'bcryptjs';
 import { User } from '@/types'; // Our User type
-
-// We'll need to create this function in src/lib/database.ts
-async function getUserByUsername(username: string): Promise<User | null> {
-  const pool = getDbPool();
-  const [rows] = await pool.execute('SELECT * FROM users WHERE username = ?', [username]);
-  const users = rows as User[];
-  return users.length > 0 ? users[0] : null;
-}
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -32,10 +24,12 @@ export const authOptions: AuthOptions = {
           if (isValidPassword) {
             // Return user object that NextAuth expects (must have an id)
             // We can omit password_hash here for security
+            
             return { 
               id: user.id, 
               name: user.username, // NextAuth 'name' maps to our 'username'
-              email: user.email 
+              username: user.username, // Add this to satisfy our augmented User type
+              email: user.email || '' // Provide empty string if email is null/undefined
             } as NextAuthUser; // Cast to NextAuthUser
           }
         }
@@ -51,7 +45,7 @@ export const authOptions: AuthOptions = {
       // Persist the user id and username to the token right after signin
       if (user) {
         token.id = user.id;
-        token.username = user.name; // user.name from authorize maps to our username
+        token.username = user.username; // Use user.username (string) here
       }
       return token;
     },
