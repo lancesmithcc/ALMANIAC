@@ -249,11 +249,26 @@ export async function deletePlant(id: string, userId: string): Promise<void> {
 export async function saveWeatherRecord(weather: Omit<WeatherRecord, 'id' | 'created_at'>) {
   const pool = getDbPool();
   const id = uuidv4();
-  await pool.execute(
-    `INSERT INTO weather_records (id, location, user_id, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, weather.location, weather.user_id || null, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
-  );
+  
+  // Try with user_id first, fallback to without user_id for backwards compatibility
+  try {
+    await pool.execute(
+      `INSERT INTO weather_records (id, location, user_id, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, weather.location, weather.user_id || null, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
+    );
+  } catch (error: any) {
+    // If user_id column doesn't exist, insert without it
+    if (error.code === 'ER_BAD_FIELD_ERROR' && error.sqlMessage?.includes('user_id')) {
+      await pool.execute(
+        `INSERT INTO weather_records (id, location, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, weather.location, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
+      );
+    } else {
+      throw error;
+    }
+  }
   return id;
 }
 
