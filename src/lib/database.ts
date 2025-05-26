@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
-import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, DailyWeatherTrend } from '@/types';
+import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, DailyWeatherTrend, User } from '@/types';
+import bcrypt from 'bcryptjs';
 
 // Database connection configuration
 const dbConfig = {
@@ -26,9 +27,21 @@ export function getDbPool() {
 
 // Database initialization scripts
 export const createTablesSQL = `
+  -- Users table
+  CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    INDEX idx_username (username)
+  );
+
   -- Plants table
   CREATE TABLE IF NOT EXISTS plants (
     id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
     plant_type VARCHAR(100) NOT NULL,
     variety VARCHAR(100),
     planting_date DATE NOT NULL,
@@ -41,7 +54,8 @@ export const createTablesSQL = `
     INDEX idx_plant_type (plant_type),
     INDEX idx_location (location),
     INDEX idx_health_status (health_status),
-    INDEX idx_stage (stage)
+    INDEX idx_stage (stage),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
   -- Weather records table
@@ -63,6 +77,7 @@ export const createTablesSQL = `
   -- Activity logs table
   CREATE TABLE IF NOT EXISTS activity_logs (
     id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
     plant_id VARCHAR(36),
     type ENUM('watering', 'pruning', 'planting', 'harvest', 'observation', 'fertilizing', 'pest_control') NOT NULL,
     description TEXT NOT NULL,
@@ -70,6 +85,7 @@ export const createTablesSQL = `
     timestamp DATETIME NOT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE SET NULL,
     INDEX idx_plant_id (plant_id),
     INDEX idx_type (type),
@@ -79,6 +95,7 @@ export const createTablesSQL = `
   -- AI recommendations table
   CREATE TABLE IF NOT EXISTS ai_recommendations (
     id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
     plant_id VARCHAR(36),
     type ENUM('watering', 'fertilizing', 'pest_control', 'harvesting', 'general') NOT NULL,
     recommendation TEXT NOT NULL,
@@ -88,6 +105,7 @@ export const createTablesSQL = `
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME,
     is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE,
     INDEX idx_plant_id (plant_id),
     INDEX idx_priority (priority),
@@ -135,46 +153,94 @@ export async function initializeDatabase() {
   }
 }
 
-// Plant operations
-export async function createPlant(plant: Omit<Plant, 'id' | 'created_at' | 'updated_at'>) {
+// User Management Functions
+export async function createUser(user: Omit<User, 'id' | 'created_at' | 'updated_at' | 'password_hash'> & { password_plaintext: string }): Promise<string> {
   const pool = getDbPool();
   const id = uuidv4();
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(user.password_plaintext, saltRounds);
+  
   await pool.execute(
-    `INSERT INTO plants (id, plant_type, variety, planting_date, location, notes, health_status, stage)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, plant.plant_type, plant.variety || null, plant.planting_date, plant.location, plant.notes || null, plant.health_status, plant.stage]
+    'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)',
+    [id, user.username, user.email || null, hashedPassword]
   );
   return id;
 }
 
-export async function getPlants(): Promise<Plant[]> {
+export async function getUserByUsername(username: string): Promise<User | null> {
   const pool = getDbPool();
-  const [rows] = await pool.execute('SELECT * FROM plants ORDER BY created_at DESC');
+  const [rows] = await pool.execute('SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE username = ?', [username]);
+  const users = rows as User[];
+  if (users.length > 0) {
+    // Ensure date fields are Date objects
+    const user = users[0];
+    user.created_at = new Date(user.created_at);
+    if (user.updated_at) {
+      user.updated_at = new Date(user.updated_at);
+    }
+    return user;
+  }
+  return null;
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute('SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE id = ?', [id]);
+  const users = rows as User[];
+   if (users.length > 0) {
+    const user = users[0];
+    user.created_at = new Date(user.created_at);
+    if (user.updated_at) {
+      user.updated_at = new Date(user.updated_at);
+    }
+    return user;
+  }
+  return null;
+}
+
+// Plant operations
+export async function createPlant(plant: Omit<Plant, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  const pool = getDbPool();
+  const id = uuidv4();
+  await pool.execute(
+    `INSERT INTO plants (id, user_id, plant_type, variety, planting_date, location, notes, health_status, stage)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, plant.user_id, plant.plant_type, plant.variety || null, plant.planting_date, plant.location, plant.notes || null, plant.health_status, plant.stage]
+  );
+  return id;
+}
+
+export async function getPlants(userId: string): Promise<Plant[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute('SELECT * FROM plants WHERE user_id = ? ORDER BY created_at DESC', [userId]);
   return rows as Plant[];
 }
 
-export async function getPlantById(id: string): Promise<Plant | null> {
+export async function getPlantById(id: string, userId: string): Promise<Plant | null> {
   const pool = getDbPool();
-  const [rows] = await pool.execute('SELECT * FROM plants WHERE id = ?', [id]);
+  const [rows] = await pool.execute('SELECT * FROM plants WHERE id = ? AND user_id = ?', [id, userId]);
   const plants = rows as Plant[];
   return plants.length > 0 ? plants[0] : null;
 }
 
-export async function updatePlant(id: string, updates: Partial<Plant>) {
+export async function updatePlant(id: string, userId: string, updates: Partial<Omit<Plant, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
   const pool = getDbPool();
-  const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at' && key !== 'updated_at') as Array<keyof Plant>;
+  const fields = Object.keys(updates) as (keyof typeof updates)[];
   const values = fields.map(field => updates[field]);
+  values.push(id);
+  values.push(userId);
+
   const setClause = fields.map(field => `${field} = ?`).join(', ');
   
   await pool.execute(
-    `UPDATE plants SET ${setClause} WHERE id = ?`,
-    [...values, id]
+    `UPDATE plants SET ${setClause} WHERE id = ? AND user_id = ?`,
+    values
   );
 }
 
-export async function deletePlant(id: string) {
+export async function deletePlant(id: string, userId: string): Promise<void> {
   const pool = getDbPool();
-  await pool.execute('DELETE FROM plants WHERE id = ?', [id]);
+  await pool.execute('DELETE FROM plants WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
 // Weather operations
@@ -199,47 +265,50 @@ export async function getRecentWeather(limit: number = 10): Promise<WeatherRecor
 }
 
 // Activity operations
-export async function createActivity(activity: Omit<ActivityLog, 'id' | 'created_at'>) {
+export async function createActivity(activity: Omit<ActivityLog, 'id' | 'created_at'>): Promise<string> {
   const pool = getDbPool();
   const id = uuidv4();
   await pool.execute(
-    `INSERT INTO activity_logs (id, plant_id, type, description, location, timestamp, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, activity.plant_id || null, activity.type, activity.description, activity.location || null, activity.timestamp, activity.notes || null]
+    `INSERT INTO activity_logs (id, user_id, plant_id, type, description, location, timestamp, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, activity.user_id, activity.plant_id || null, activity.type, activity.description, activity.location || null, activity.timestamp, activity.notes || null]
   );
   return id;
 }
 
-export async function getRecentActivities(limit: number = 20): Promise<ActivityLog[]> {
+export async function getRecentActivities(userId: string, limit: number = 10): Promise<ActivityLog[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute(
-    'SELECT * FROM activity_logs ORDER BY timestamp DESC LIMIT ?',
-    [limit]
+    'SELECT * FROM activity_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?',
+    [userId, limit]
   );
   return rows as ActivityLog[];
 }
 
 // AI Recommendations operations
-export async function saveAIRecommendation(recommendation: Omit<AIRecommendation, 'id' | 'created_at'>) {
+export async function saveAIRecommendation(recommendation: Omit<AIRecommendation, 'id' | 'created_at'>): Promise<string> {
   const pool = getDbPool();
   const id = uuidv4();
   await pool.execute(
-    `INSERT INTO ai_recommendations (id, plant_id, type, recommendation, confidence, priority, weather_factor, expires_at, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, recommendation.plant_id || null, recommendation.type, recommendation.recommendation, recommendation.confidence, recommendation.priority, recommendation.weather_factor || false, recommendation.expires_at || null, recommendation.is_active]
+    `INSERT INTO ai_recommendations (id, user_id, plant_id, type, recommendation, confidence, priority, weather_factor, expires_at, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, recommendation.user_id, recommendation.plant_id || null, recommendation.type, recommendation.recommendation, recommendation.confidence, recommendation.priority, recommendation.weather_factor || false, recommendation.expires_at || null, recommendation.is_active]
   );
   return id;
 }
 
-export async function getActiveRecommendations(): Promise<AIRecommendation[]> {
+export async function getActiveRecommendations(userId: string): Promise<AIRecommendation[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute(
-    `SELECT * FROM ai_recommendations 
-     WHERE is_active = TRUE 
-     AND (expires_at IS NULL OR expires_at > NOW())
-     ORDER BY priority DESC, created_at DESC`
+    'SELECT * FROM ai_recommendations WHERE user_id = ? AND is_active = TRUE ORDER BY created_at DESC',
+    [userId]
   );
   return rows as AIRecommendation[];
+}
+
+export async function deactivateAIRecommendation(id: string, userId: string): Promise<void> {
+  const pool = getDbPool();
+  await pool.execute('UPDATE ai_recommendations SET is_active = FALSE WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
 // Location operations

@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { DeepSeekAnalysisResponse, WeatherData } from '@/types';
+import { DeepSeekAnalysisResponse, WeatherData, AIRecommendation } from '@/types';
 import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommendations } from '@/lib/database';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const userId = session.user.id;
+
   try {
     const body = await request.json();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -20,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Gather data for analysis
-    const plants = await getPlants();
+    const plants = await getPlants(userId);
     let weatherForAI: Array<{
       current: Partial<Pick<WeatherData, 'temperature' | 'humidity' | 'windSpeed' | 'condition' | 'description' | 'uv' | 'feelsLike'>>;
       astro: WeatherData['astro'];
@@ -43,13 +51,34 @@ export async function POST(request: NextRequest) {
         // console.error('An error occurred while fetching weather for AI, but it was ignored.'); 
       }
     }
-    const activities = includeActivities ? await getRecentActivities(20) : [];
+    const activities = includeActivities ? await getRecentActivities(userId, 20) : [];
 
-    // --- ULTRA-MINIMAL PROMPT TEST --- 
-    const systemPrompt = "You are a helpful assistant. Respond with only the word 'OK'.";
-    const userPrompt = "Hello."; // This should remain minimal for the test
-    console.log('USING ULTRA-MINIMAL PROMPT FOR TESTING');
-    // --- END ULTRA-MINIMAL PROMPT TEST ---
+    // --- Restoring Original Prompt Logic ---
+    // const systemPrompt = "You are a helpful assistant. Respond with only the word 'OK'.";
+    // const userPrompt = "Hello."; // This should remain minimal for the test
+    // console.log('USING ULTRA-MINIMAL PROMPT FOR TESTING');
+    
+    const systemPrompt = `You are Almaniac, an expert AI farming assistant specializing in permaculture, astrology-informed planting, and sustainable agriculture. 
+    Your goal is to provide actionable, insightful, and context-aware recommendations. 
+    Analyze the provided farm data (plants, recent activities, weather forecast including moon phase) to generate comprehensive advice. 
+    Structure your response as a JSON object with the following keys: "recommendations", "insights", "alerts".
+    - "recommendations": An array of objects, each with "type" (e.g., "watering", "fertilizing", "pest_control", "planting", "harvesting", "soil_management", "permaculture_design", "moon_phase_timing", "general"), "priority" ("low", "medium", "high", "urgent"), "description" (actionable advice), "reasoning" (briefly explain why), and "confidence" (0-100).
+    - "insights": An object with keys like "growth_trends", "weather_impacts", "health_observations", "permaculture_opportunities", "astrological_influences". Each key should have an array of strings or a descriptive string.
+    - "alerts": An array of objects for critical issues, each with "type" (e.g., "disease_risk", "pest_infestation", "nutrient_deficiency", "extreme_weather"), "severity" ("warning", "critical"), "description", and "suggested_action".
+    Prioritize permaculture principles, soil health, water conservation, and biodiversity. Consider the current moon phase and astrological data in your timing and task suggestions.`;
+
+    // Construct a more detailed user prompt based on available data
+    let userPromptParts = [
+        _question || "Provide a general analysis and recommendations for my farm based on the latest data.",
+        `Current Plants: ${plants.length > 0 ? plants.map(p => `${p.plant_type} (${p.variety || 'N/A'}, Stage: ${p.stage}, Health: ${p.health_status})`).join('; ') : 'No plants logged.'}`,
+        `Weather: ${weatherForAI.length > 0 && weatherForAI[0].current && weatherForAI[0].astro ? 
+          `Temp: ${weatherForAI[0].current.temperature}°C, Humidity: ${weatherForAI[0].current.humidity}%, Condition: ${weatherForAI[0].current.description}, Moon Phase: ${weatherForAI[0].astro.moon_phase} (Illumination: ${weatherForAI[0].astro.moon_illumination}%)` 
+          : 'Weather data not available.'}`,
+        `Recent Activities: ${activities.length > 0 ? activities.map(a => `${a.type}: ${a.description}`).join('; ') : 'No recent activities logged.'}`
+    ];
+    const userPrompt = userPromptParts.join('\n\n');
+    console.log('USING FULL PROMPT FOR AI ANALYSIS');
+    // --- END Original Prompt Logic ---
 
     // Call DeepSeek API with retry logic and timeout
     console.log('Sending data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length);
@@ -174,19 +203,22 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Save high-priority recommendations to database
+    // Save high-priority recommendations to database, now with user_id
     for (const recommendation of analysisResult.recommendations) {
       if (recommendation.priority === 'high' || recommendation.priority === 'urgent') {
         try {
-          await saveAIRecommendation({
+          const recData: Omit<AIRecommendation, 'id' | 'created_at'> = {
+            user_id: userId, // Associate with current user
+            plant_id: recommendation.plant_id || undefined, // Safely access optional plant_id
             type: recommendation.type as 'watering' | 'fertilizing' | 'pest_control' | 'harvesting' | 'general',
             recommendation: recommendation.description,
             confidence: recommendation.confidence,
             priority: recommendation.priority,
-            weather_factor: includeWeather,
+            weather_factor: includeWeather, // This might need to be more nuanced
             is_active: true,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
-          });
+          };
+          await saveAIRecommendation(recData);
         } catch (dbError) {
           console.error('Failed to save AI recommendation:', dbError);
         }
@@ -221,10 +253,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const userId = session.user.id;
+
   try {
-    // Get recent AI recommendations
-    const recommendations = await getActiveRecommendations();
+    const recommendations = await getActiveRecommendations(userId);
     
     return NextResponse.json({
       success: true,

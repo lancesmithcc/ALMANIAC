@@ -14,6 +14,8 @@
 - [x] Create database utility functions
 - [x] Fix MySQL compatibility issues (TIMESTAMP/UUID)
 - [x] Initialize database tables successfully
+- [ ] Add `users` table for authentication
+- [ ] Add `user_id` to data tables (plants, activities, etc.)
 
 ## API Integration
 - [x] Set up Weather API integration
@@ -25,6 +27,9 @@
 - [x] Create analytics API route
 - [x] Create activities API route
 - [x] Add 3-day weather forecast integration
+- [ ] Set up `next-auth` for authentication
+- [ ] Create signup API endpoint
+- [ ] Secure existing API routes (user-specific data access)
 
 ## Core Features
 - [x] Create dashboard layout
@@ -37,6 +42,8 @@
 - [x] Remove all mock data and use real database data
 - [x] Add 3-day weather forecast display
 - [ ] Integrate Moon Phase (Astrology) tracking
+- [ ] Implement User Authentication (Login/Signup)
+- [ ] Implement User Account Management (Password Change)
 
 ## UI/UX Components
 - [x] Create dark theme configuration
@@ -47,6 +54,9 @@
 - [x] Add error handling and user feedback
 - [x] Add location settings modal for weather
 - [ ] Display Moon Phase in Weather Widget
+- [ ] Create Login/Signup pages and forms
+- [ ] Create Account Management page
+- [ ] Update UI for authenticated/unauthenticated states
 
 ## Data Management
 - [x] Create data models and types
@@ -56,6 +66,7 @@
 - [x] Replace all hardcoded data with real API calls
 - [ ] Add data validation
 - [ ] Create data export functionality
+- [ ] Ensure data ownership and privacy per user
 
 ## Analytics & Insights
 - [x] Build charts and visualizations
@@ -89,12 +100,14 @@
 ✅ **Weather Icons:** Integrated real weather icons from WeatherAPI service
 ✅ **Module Resolution Fixes:** Resolved import errors for dashboard components
 ✅ **Weather Trend Analysis:** Implemented charts for temperature, precipitation, and humidity trends.
+✅ **Minimal AI Prompt Test Successful:** Confirmed basic DeepSeek API connectivity.
 
 ## Next Steps
-1. Integrate Moon Phase tracking (data and UI)
-2. Enhance AI for Permaculture and Moon Phase insights
-3. Test AI recommendations with real plant data
-4. Add comprehensive data validation
-5. Implement Plant Health Tracking
-6. Create user documentation
-7. Final polishing and optimization 
+1. Implement User Authentication (Setup, DB, API, UI)
+2. Integrate Moon Phase tracking (data and UI)
+3. Enhance AI for Permaculture and Moon Phase insights (with restored prompts, careful tuning of max_tokens)
+4. Test AI recommendations with real plant data for specific users
+5. Add comprehensive data validation
+6. Implement Plant Health Tracking
+7. Create user documentation
+8. Final polishing and optimization 

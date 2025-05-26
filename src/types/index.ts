@@ -2,6 +2,7 @@
 
 export interface Plant {
   id: string;
+  user_id: string;
   plant_type: string;
   variety?: string;
   planting_date: string | Date;
@@ -28,6 +29,7 @@ export interface WeatherRecord {
 
 export interface ActivityLog {
   id: string;
+  user_id: string;
   plant_id?: string;
   type: 'watering' | 'pruning' | 'planting' | 'harvest' | 'observation' | 'fertilizing' | 'pest_control';
   description: string;
@@ -39,6 +41,7 @@ export interface ActivityLog {
 
 export interface AIRecommendation {
   id: string;
+  user_id: string;
   plant_id?: string;
   type: 'watering' | 'fertilizing' | 'pest_control' | 'harvesting' | 'general';
   recommendation: string;
@@ -233,13 +236,14 @@ export interface DeepSeekAnalysisRequest {
 }
 
 export interface DeepSeekAnalysisResponse {
-  recommendations: {
-    type: string;
+  recommendations: Array<{
+    type: string; // general, watering, fertilizing, pest_control, planting, harvesting, soil_management, permaculture_design, moon_phase_timing etc.
     priority: 'low' | 'medium' | 'high' | 'urgent';
     description: string;
     reasoning: string;
     confidence: number;
-  }[];
+    plant_id?: string; // Optional: if the recommendation is specific to a plant
+  }>;
   insights: {
     growth_trends: string[];
     weather_impacts: string[];
@@ -298,4 +302,21 @@ export interface WeatherTrendData {
     total_precip_change?: number;
     avg_humidity_change?: number;
   };
+}
+
+// Define User type
+export interface User {
+  id: string;
+  username: string;
+  email?: string | null; // Make email explicitly optional or nullable
+  password_hash: string; // This will not be sent to client
+  created_at: Date;
+  updated_at?: Date | null;
+}
+
+// For client-side User session data (omitting password_hash)
+export interface SessionUser {
+  id: string;
+  username: string;
+  email?: string | null;
 } 

@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecentActivities, createActivity } from '@/lib/database';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { ActivityLog } from '@/types';
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '10'); // Default to 10, consistent with db function
     
-    const activities = await getRecentActivities(limit);
+    const activities = await getRecentActivities(session.user.id, limit);
     
     return NextResponse.json({
       success: true,
@@ -22,6 +30,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { plant_id, type, description, location, notes } = body;
@@ -33,14 +46,17 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const id = await createActivity({
+    const activityData: Omit<ActivityLog, 'id' | 'created_at'> = {
+      user_id: session.user.id, // Associate with current user
       plant_id: plant_id || null,
       type,
       description,
       location: location || null,
-      timestamp: new Date(),
+      timestamp: new Date(), // This should be set server-side
       notes: notes || null
-    });
+    };
+
+    const id = await createActivity(activityData);
     
     return NextResponse.json({
       success: true,

@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPlant, getPlants, updatePlant, deletePlant } from '@/lib/database';
 import { PlantFormData } from '@/types';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const plants = await getPlants();
+    const plants = await getPlants(session.user.id);
     return NextResponse.json({
       success: true,
       plants
@@ -19,10 +26,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body: PlantFormData = await request.json();
     
-    // Validate required fields
     if (!body.plant_type || !body.planting_date || !body.location) {
       return NextResponse.json(
         { error: 'Missing required fields: plant_type, planting_date, location' },
@@ -30,8 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert form data to database format
     const plantData = {
+      user_id: session.user.id, // Associate with current user
       plant_type: body.plant_type,
       variety: body.variety || undefined,
       planting_date: new Date(body.planting_date),
@@ -58,63 +69,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id, ...updates } = body;
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Plant ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Convert date strings to Date objects if present
-    if (updates.planting_date) {
-      updates.planting_date = new Date(updates.planting_date);
-    }
-
-    await updatePlant(id, updates);
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Plant updated successfully'
-    });
-
-  } catch (error) {
-    console.error('Error updating plant:', error);
-    return NextResponse.json(
-      { error: 'Failed to update plant' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Plant ID is required' },
-        { status: 400 }
-      );
-    }
-
-    await deletePlant(id);
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Plant deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Error deleting plant:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete plant' },
-      { status: 500 }
-    );
-  }
-} 
+// Note: The PUT and DELETE for a specific plant ID should be in [plantId]/route.ts
+// This file should only handle /api/plants (GET all, POST new)
+// I'll remove PUT and DELETE from here and ensure they are correctly placed and updated in [plantId]/route.ts 

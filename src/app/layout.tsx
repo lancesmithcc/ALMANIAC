@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { Jost } from "next/font/google";
 import "./globals.css";
+// import { ThemeProvider } from "@/components/theme-provider"; // Temporarily commented out
+import SessionProviderWrapper from "@/components/session-provider-wrapper.tsx";
 
 const jost = Jost({
-  variable: "--font-jost",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-jost",
 });
 
 export const metadata: Metadata = {
   title: "Almaniac - Smart Farming Dashboard",
-  description: "AI-powered almanac for tracking plants, weather, and land management with intelligent insights",
+  description: "Intelligent insights for your agricultural success.",
 };
 
 export default function RootLayout({
@@ -19,11 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${jost.variable} font-sans antialiased bg-gray-950 text-gray-100 min-h-screen`}
-      >
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${jost.variable} font-sans`}>
+        <SessionProviderWrapper>
+          {/* <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          > */}
+            {children}
+          {/* </ThemeProvider> */}
+        </SessionProviderWrapper>
       </body>
     </html>
   );
