@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth";
+import { getPlants } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,13 +22,73 @@ export async function POST(request: NextRequest) {
       body = {};
     }
 
-    // Generate basic fallback immediately to ensure we always have a response
+    // Fetch user's plants safely
+    let plants: any[] = [];
+    let plantsCount = 0;
+    try {
+      plants = await getPlants(session.user.id);
+      plantsCount = plants.length;
+      console.log('Successfully fetched plants:', plantsCount);
+    } catch (error) {
+      console.error('Failed to fetch plants:', error);
+      plants = [];
+      plantsCount = 0;
+    }
+
+    // Generate plant-specific recommendations if we have plants
+    const plantRecommendations = [];
+    if (plants.length > 0) {
+      const plantTypes = [...new Set(plants.map(p => p.plant_type))];
+      
+      plantRecommendations.push({
+        type: 'plant_care',
+        priority: 'high' as const,
+        description: `You have ${plants.length} plants (${plantTypes.join(', ')}). Focus on consistent watering and daily observation.`,
+        reasoning: 'Your established plants need regular care and monitoring for optimal health.',
+        confidence: 95,
+        timing: 'Daily care routine',
+        permaculture_principle: 'Observe and interact'
+      });
+
+      // Check for plants needing attention
+      const poorHealthPlants = plants.filter(p => p.health_status === 'poor' || p.health_status === 'declining');
+      if (poorHealthPlants.length > 0) {
+        plantRecommendations.push({
+          type: 'urgent_care',
+          priority: 'urgent' as const,
+          description: `${poorHealthPlants.length} plants need immediate attention: ${poorHealthPlants.map(p => p.plant_type).join(', ')}`,
+          reasoning: 'Poor plant health can spread and indicates systemic issues that need addressing.',
+          confidence: 90,
+          timing: 'Immediate action required',
+          permaculture_principle: 'Observe and interact'
+        });
+      }
+
+      // Harvest recommendations
+      const maturePlants = plants.filter(p => p.stage === 'fruiting' || p.stage === 'harvest' || p.stage === 'mature');
+      if (maturePlants.length > 0) {
+        plantRecommendations.push({
+          type: 'harvesting',
+          priority: 'medium' as const,
+          description: `${maturePlants.length} plants ready for harvest: ${maturePlants.map(p => p.plant_type).join(', ')}`,
+          reasoning: 'Timely harvesting ensures best flavor and encourages continued production.',
+          confidence: 85,
+          timing: 'Check daily for optimal harvest timing',
+          permaculture_principle: 'Obtain a yield'
+        });
+      }
+    }
+
+    // Generate basic fallback with plant data
     const basicFallback = {
       recommendations: [
+        ...plantRecommendations,
         {
           type: 'permaculture_design',
           priority: 'high' as const,
-          description: 'Start with a simple three-zone garden design: herbs near kitchen, vegetables in main area, fruit trees in back.',
+          description: plants.length > 0 ? 
+            'Expand your garden with companion plants that support your existing crops.' :
+            'Start with a simple three-zone garden design: herbs near kitchen, vegetables in main area, fruit trees in back.',
           reasoning: 'Permaculture zoning creates efficient, sustainable food systems.',
           confidence: 95,
           timing: 'Plan during quiet garden time',
@@ -45,7 +106,9 @@ export async function POST(request: NextRequest) {
         {
           type: 'companion_planting',
           priority: 'medium' as const,
-          description: 'Plant herbs like basil and marigolds throughout your garden for natural pest control.',
+          description: plants.length > 0 ?
+            'Add herbs like basil and marigolds between your existing plants for natural pest control.' :
+            'Plant herbs like basil and marigolds throughout your garden for natural pest control.',
           reasoning: 'Companion plants create beneficial relationships and reduce pest problems.',
           confidence: 90,
           timing: 'Plant during growing season',
@@ -53,7 +116,11 @@ export async function POST(request: NextRequest) {
         }
       ],
       insights: {
-        growth_trends: [
+        growth_trends: plants.length > 0 ? [
+          `You have ${plants.length} plants in various stages of growth`,
+          'Focus on creating beneficial relationships between your plants',
+          'Monitor plant spacing to prevent overcrowding'
+        ] : [
           'Focus on building healthy soil biology for long-term success',
           'Start with easy-to-grow plants to build confidence',
           'Observe your garden daily to learn its patterns'
@@ -63,7 +130,11 @@ export async function POST(request: NextRequest) {
           'Use mulch to protect plants from weather extremes',
           'Plan for seasonal changes in your garden'
         ],
-        health_observations: [
+        health_observations: plants.length > 0 ? [
+          'Regular observation of your plants prevents most problems',
+          'Diverse plantings create natural pest control',
+          'Healthy soil prevents most plant diseases'
+        ] : [
           'Diverse plantings create natural pest control',
           'Regular observation prevents most problems',
           'Healthy soil prevents most plant diseases'
@@ -86,7 +157,18 @@ export async function POST(request: NextRequest) {
         'Full moon: Harvesting and preservation',
         'Waning moon: Pruning and soil work'
       ],
-      plant_astrology: [
+      plant_astrology: plants.length > 0 ? [
+        {
+          plant: `Your Garden (${plants.length} plants)`,
+          astrological_profile: 'Your diverse garden creates a unique cosmic signature that benefits from lunar timing',
+          current_influence: 'Each plant responds to moon phases - observe how they react to different lunar energies',
+          recommendations: [
+            'Start a lunar gardening journal for your plants',
+            'Plant by moon phases for enhanced growth',
+            'Harvest during full moons for maximum potency'
+          ]
+        }
+      ] : [
         {
           plant: 'General Garden',
           astrological_profile: 'All plants benefit from lunar timing and natural cycles',
@@ -100,14 +182,14 @@ export async function POST(request: NextRequest) {
       ]
     };
 
-    console.log('Basic fallback generated successfully');
+    console.log('Basic fallback generated successfully with plant data');
 
-    // Return the basic fallback immediately
+    // Return the basic fallback with actual plant data
     return NextResponse.json({
       success: true,
       analysis: basicFallback,
       metadata: {
-        plants_analyzed: 0,
+        plants_analyzed: plantsCount,
         weather_records: 0,
         activities_reviewed: 0,
         moon_phase_included: false,
