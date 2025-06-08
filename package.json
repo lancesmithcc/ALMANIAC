@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup": "node generate-env.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",

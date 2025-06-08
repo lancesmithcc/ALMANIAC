@@ -3,6 +3,23 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { getUserByUsername } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 
+// Generate a fallback secret for development if none is provided
+const getAuthSecret = () => {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (secret) {
+    return secret;
+  }
+  
+  // In development, generate a warning and use a fallback
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️  NEXTAUTH_SECRET not set. Using fallback for development. Set NEXTAUTH_SECRET in production!');
+    return 'dev-fallback-secret-change-in-production';
+  }
+  
+  // In production, this should fail
+  throw new Error('NEXTAUTH_SECRET must be set in production environment');
+};
+
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -16,21 +33,26 @@ export const authOptions: AuthOptions = {
           return null;
         }
 
-        const user = await getUserByUsername(credentials.username);
+        try {
+          const user = await getUserByUsername(credentials.username);
 
-        if (user && user.password_hash) {
-          const isValidPassword = await bcrypt.compare(credentials.password, user.password_hash);
-          if (isValidPassword) {
-            // Return user object that NextAuth expects (must have an id)
-            // We can omit password_hash here for security
-            
-            return { 
-              id: user.id, 
-              name: user.username, // NextAuth 'name' maps to our 'username'
-              username: user.username, // Add this to satisfy our augmented User type
-              email: user.email || '' // Provide empty string if email is null/undefined
-            } as NextAuthUser; // Cast to NextAuthUser
+          if (user && user.password_hash) {
+            const isValidPassword = await bcrypt.compare(credentials.password, user.password_hash);
+            if (isValidPassword) {
+              // Return user object that NextAuth expects (must have an id)
+              // We can omit password_hash here for security
+              
+              return { 
+                id: user.id, 
+                name: user.username, // NextAuth 'name' maps to our 'username'
+                username: user.username, // Add this to satisfy our augmented User type
+                email: user.email || '' // Provide empty string if email is null/undefined
+              } as NextAuthUser; // Cast to NextAuthUser
+            }
           }
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
         }
         return null; // Login failed
       }
@@ -61,5 +83,5 @@ export const authOptions: AuthOptions = {
     signIn: '/login', // We will create this page
     // error: '/auth/error', // Optional: an error page
   },
-  secret: process.env.NEXTAUTH_SECRET, // MUST be set in .env.local and Netlify
+  secret: getAuthSecret(), // Use our helper function
 };
