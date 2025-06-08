@@ -1,10 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+
+interface DatabaseResult {
+  success: boolean;
+  message: string;
+  results?: Array<{
+    table: string;
+    status: string;
+    error?: string;
+  }>;
+  connected?: boolean;
+  error?: string;
+  details?: string;
+}
 
 export default function SetupPage() {
   const [isInitializing, setIsInitializing] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<DatabaseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const initializeDatabase = async () => {
@@ -17,7 +31,7 @@ export default function SetupPage() {
         method: 'POST',
       });
 
-      const data = await response.json();
+      const data: DatabaseResult = await response.json();
 
       if (response.ok) {
         setResult(data);
@@ -41,7 +55,7 @@ export default function SetupPage() {
         method: 'GET',
       });
 
-      const data = await response.json();
+      const data: DatabaseResult = await response.json();
       setResult(data);
     } catch (err) {
       setError('Network error: ' + (err instanceof Error ? err.message : 'Unknown error'));
@@ -101,7 +115,7 @@ export default function SetupPage() {
               <div className="mt-4">
                 <h4 className="text-white font-medium mb-2">Tables Created:</h4>
                 <ul className="space-y-1">
-                  {result.results.map((table: any, index: number) => (
+                  {result.results.map((table, index) => (
                     <li key={index} className="flex items-center">
                       <span className={table.status === 'success' ? 'text-green-400' : 'text-red-400'}>
                         {table.status === 'success' ? '✅' : '❌'}
@@ -129,12 +143,12 @@ export default function SetupPage() {
               <li>Get AI recommendations</li>
             </ul>
             <div className="mt-4">
-              <a 
+              <Link 
                 href="/" 
                 className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium inline-block"
               >
                 Go to App →
-              </a>
+              </Link>
             </div>
           </div>
         )}
