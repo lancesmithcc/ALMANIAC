@@ -244,18 +244,28 @@ export interface DeepSeekAnalysisResponse {
     reasoning: string;
     confidence: number;
     plant_id?: string; // Optional: if the recommendation is specific to a plant
+    timing?: string; // Optimal timing based on moon phase and astrological factors
+    permaculture_principle?: string; // Which of the 12 permaculture principles this applies to
   }>;
   insights: {
     growth_trends: string[];
     weather_impacts: string[];
     health_observations: string[];
     astrological_influences: string[];
+    permaculture_opportunities?: string[]; // Specific design improvements and system integrations
   };
   alerts: {
     type: 'warning' | 'info' | 'success';
     message: string;
     plant_id?: string;
   }[];
+  moon_guidance?: string[]; // Specific lunar calendar advice for the next 7 days
+  plant_astrology?: Array<{
+    plant: string;
+    astrological_profile: string;
+    current_influence: string;
+    recommendations: string[];
+  }>; // Astrological readings for each plant type in the garden
 }
 
 // Form types
