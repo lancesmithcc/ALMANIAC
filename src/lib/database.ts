@@ -257,9 +257,10 @@ export async function saveWeatherRecord(weather: Omit<WeatherRecord, 'id' | 'cre
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, weather.location, weather.user_id || null, weather.temperature, weather.humidity, weather.wind_speed, weather.precipitation, weather.condition, weather.description, weather.recorded_at]
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If user_id column doesn't exist, insert without it
-    if (error.code === 'ER_BAD_FIELD_ERROR' && error.sqlMessage?.includes('user_id')) {
+    const mysqlError = error as { code?: string; sqlMessage?: string };
+    if (mysqlError.code === 'ER_BAD_FIELD_ERROR' && mysqlError.sqlMessage?.includes('user_id')) {
       await pool.execute(
         `INSERT INTO weather_records (id, location, temperature, humidity, wind_speed, precipitation, \`condition\`, description, recorded_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
