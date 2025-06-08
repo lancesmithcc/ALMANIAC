@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server';
 import { testConnection, getDbPool } from '@/lib/database';
 
 const alterTablesSQLArray = [
-  // Add user_id column to plants table if it doesn't exist
-  `ALTER TABLE plants ADD COLUMN IF NOT EXISTS user_id VARCHAR(36) NOT NULL DEFAULT ''`,
+  // Add user_id column to plants table (MySQL compatible syntax)
+  `ALTER TABLE plants ADD COLUMN user_id VARCHAR(36) NOT NULL DEFAULT ''`,
   
-  // Add user_id column to weather_records table if it doesn't exist  
-  `ALTER TABLE weather_records ADD COLUMN IF NOT EXISTS user_id VARCHAR(36)`,
+  // Add user_id column to weather_records table
+  `ALTER TABLE weather_records ADD COLUMN user_id VARCHAR(36)`,
   
-  // Add user_id column to activity_logs table if it doesn't exist
-  `ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS user_id VARCHAR(36) NOT NULL DEFAULT ''`,
+  // Add user_id column to activity_logs table
+  `ALTER TABLE activity_logs ADD COLUMN user_id VARCHAR(36) NOT NULL DEFAULT ''`,
   
-  // Add user_id column to ai_recommendations table if it doesn't exist
-  `ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS user_id VARCHAR(36) NOT NULL DEFAULT ''`,
+  // Add user_id column to ai_recommendations table
+  `ALTER TABLE ai_recommendations ADD COLUMN user_id VARCHAR(36) NOT NULL DEFAULT ''`,
   
   // Add foreign key constraints (these will fail if they already exist, which is fine)
   `ALTER TABLE plants ADD CONSTRAINT fk_plants_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`,
@@ -51,10 +51,11 @@ export async function POST() {
         console.error(`✗ Failed to execute ${operation}:`, error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         
-        // Some errors are expected (like constraint already exists)
-        if (errorMessage.includes('Duplicate key name') || 
+        // Some errors are expected (like column/constraint already exists)
+        if (errorMessage.includes('Duplicate column name') || 
+            errorMessage.includes('Duplicate key name') || 
             errorMessage.includes('already exists') ||
-            errorMessage.includes('Duplicate column name')) {
+            errorMessage.includes('Column already exists')) {
           results.push({ 
             operation, 
             status: 'skipped', 
