@@ -17,7 +17,7 @@ const navItems = [
   { name: 'Plants & Land', icon: Leaf },
   { name: 'Weather', icon: Cloud },
   { name: 'Analytics', icon: BarChart2 },
-  { name: 'AI Insights', icon: Brain },
+  { name: 'Insights', icon: Brain },
   { name: 'Community', icon: Users, comingSoon: true },
   { name: 'Calendar', icon: CalendarDays, comingSoon: true },
   { name: 'Settings', icon: Settings, comingSoon: true },

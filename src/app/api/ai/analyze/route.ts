@@ -313,13 +313,32 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.DEEPSEEK_API_KEY;
     console.log('API Key check - Key exists:', !!apiKey, 'Key length:', apiKey?.length || 0);
     
-    // Gather data for analysis
-    const plants = await getPlants(userId);
-    let weatherForAI: Array<{
-      current: Partial<Pick<WeatherData, 'temperature' | 'humidity' | 'windSpeed' | 'condition' | 'description' | 'uv' | 'feelsLike'>>;
-      astro: WeatherData['astro'];
-    }> = [];
+    // Always provide fallback insights first, then try to enhance with AI
+    let analysisResult: DeepSeekAnalysisResponse;
+    let aiResponseContent: string | undefined = undefined;
     
+    // Gather data for analysis with error handling
+    let plants: any[] = [];
+    let activities: any[] = [];
+    let weatherForAI: any[] = [];
+    let moonPhaseData: any = null;
+
+    try {
+      plants = await getPlants(userId);
+      console.log('Successfully fetched plants:', plants.length);
+    } catch (error) {
+      console.error('Failed to fetch plants:', error);
+      plants = [];
+    }
+
+    try {
+      activities = includeActivities ? await getRecentActivities(userId, 20) : [];
+      console.log('Successfully fetched activities:', activities.length);
+    } catch (error) {
+      console.error('Failed to fetch activities:', error);
+      activities = [];
+    }
+
     // Fetch weather data
     if (includeWeather) {
       try {
@@ -348,6 +367,7 @@ export async function POST(request: NextRequest) {
                 moon_illumination: weatherData.forecast?.forecastday?.[0]?.astro?.moon_illumination || 'N/A'
               }
             }];
+            console.log('Successfully fetched weather data');
           }
         }
       } catch (weatherError) { 
@@ -356,18 +376,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch moon phase data - calculate directly instead of API call
-    let moonPhaseData: {
-      phase: string;
-      illumination: number;
-      age: number;
-      zodiac_sign: string;
-      moon_sign_element: string;
-      optimal_activities: string[];
-      planting_guidance: string;
-      energy_description: string;
-    } | null = null;
-    
+    // Calculate moon phase data directly
     try {
       // Calculate moon phase directly
       const now = new Date();
@@ -438,16 +447,43 @@ export async function POST(request: NextRequest) {
                            phase === 'Full Moon' ? 'Peak energy and manifestation' :
                            'New beginnings and fresh starts'
       };
+      console.log('Successfully calculated moon phase data');
     } catch (moonError) {
       console.log('Moon phase calculation failed, continuing without moon data:', moonError);
       // Continue without moon data
     }
 
-    const activities = includeActivities ? await getRecentActivities(userId, 20) : [];
-
-    // Always provide fallback insights first, then try to enhance with AI
-    let analysisResult = generateFallbackInsights(plants, activities, weatherForAI, moonPhaseData);
-    let aiResponseContent: string | undefined = undefined;
+    // Generate fallback insights first - this ensures we always have something to return
+    try {
+      analysisResult = generateFallbackInsights(plants, activities, weatherForAI, moonPhaseData);
+      console.log('Successfully generated fallback insights');
+    } catch (fallbackError) {
+      console.error('Failed to generate fallback insights, using minimal fallback:', fallbackError);
+      // Absolute minimal fallback if even the fallback function fails
+      analysisResult = {
+        recommendations: [
+          {
+            type: 'general',
+            priority: 'medium' as const,
+            description: 'Start with basic garden maintenance and observe your plants daily.',
+            reasoning: 'Regular observation is the foundation of successful gardening.',
+            confidence: 90,
+            timing: 'Daily',
+            permaculture_principle: 'Observe and interact'
+          }
+        ],
+        insights: {
+          growth_trends: ['Focus on establishing healthy growing habits'],
+          weather_impacts: ['Monitor local weather patterns for optimal timing'],
+          health_observations: ['Regular observation prevents most problems'],
+          permaculture_opportunities: ['Start with simple sustainable practices'],
+          astrological_influences: ['Consider natural cycles in your gardening']
+        },
+        alerts: [],
+        moon_guidance: ['Follow natural cycles for optimal results'],
+        plant_astrology: []
+      };
+    }
 
     // Try to enhance with AI if API key is available
     if (apiKey) {
@@ -658,27 +694,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Save high-priority recommendations to database
-    for (const recommendation of analysisResult.recommendations) {
-      if (recommendation.priority === 'high' || recommendation.priority === 'urgent') {
-        try {
-          const recData: Omit<AIRecommendation, 'id' | 'created_at'> = {
-            user_id: userId,
-            plant_id: recommendation.plant_id || undefined,
-            type: recommendation.type as 'watering' | 'fertilizing' | 'pest_control' | 'harvesting' | 'general',
-            recommendation: recommendation.description,
-            confidence: recommendation.confidence,
-            priority: recommendation.priority,
-            weather_factor: includeWeather,
-            is_active: true,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          };
-          await saveAIRecommendation(recData);
-        } catch (dbError) {
-          console.error('Failed to save AI recommendation:', dbError);
+    try {
+      for (const recommendation of analysisResult.recommendations) {
+        if (recommendation.priority === 'high' || recommendation.priority === 'urgent') {
+          try {
+            const recData: Omit<AIRecommendation, 'id' | 'created_at'> = {
+              user_id: userId,
+              plant_id: recommendation.plant_id || undefined,
+              type: recommendation.type as 'watering' | 'fertilizing' | 'pest_control' | 'harvesting' | 'general',
+              recommendation: recommendation.description,
+              confidence: recommendation.confidence,
+              priority: recommendation.priority,
+              weather_factor: includeWeather,
+              is_active: true,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            };
+            await saveAIRecommendation(recData);
+          } catch (dbError) {
+            console.error('Failed to save AI recommendation:', dbError);
+          }
         }
       }
+    } catch (saveError) {
+      console.error('Failed to save recommendations to database:', saveError);
+      // Continue anyway - this is not critical
     }
 
+    // Always return a successful response with the analysis
     return NextResponse.json({
       success: true,
       analysis: analysisResult,
