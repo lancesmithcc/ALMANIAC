@@ -216,6 +216,7 @@ export interface WeatherData {
   feelsLike?: number;
   visibility?: number;
   forecast?: ForecastDay[];
+  unit?: string;
   astro?: {
     sunrise: string;
     sunset: string;

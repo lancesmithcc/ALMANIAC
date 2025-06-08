@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const location = searchParams.get('location') || 'auto:ip';
     const includeForecast = searchParams.get('forecast') !== 'false'; // Default to true
+    const unit = searchParams.get('unit') || 'celsius'; // Default to celsius
     
     const apiKey = process.env.WEATHER_API_KEY;
     if (!apiKey) {
@@ -74,14 +75,20 @@ export async function GET(request: NextRequest) {
     const response = await axios.get<WeatherApiResponse>(apiUrl);
     const weatherData = response.data;
     
-    // Save weather record to database
+    // Helper function to get temperature based on unit preference
+    const getTemp = (tempC: number, tempF: number) => unit === 'fahrenheit' ? tempF : tempC;
+    const getSpeed = (mph: number, kph: number) => unit === 'fahrenheit' ? mph : kph;
+    const getDistance = (miles: number, km: number) => unit === 'fahrenheit' ? miles : km;
+    const getPrecip = (inches: number, mm: number) => unit === 'fahrenheit' ? inches : mm;
+
+    // Save weather record to database (always save in the user's preferred unit)
     try {
       await saveWeatherRecord({
         location: `${weatherData.location.name}, ${weatherData.location.region}`,
-        temperature: weatherData.current.temp_f,
+        temperature: getTemp(weatherData.current.temp_c, weatherData.current.temp_f),
         humidity: weatherData.current.humidity,
-        wind_speed: weatherData.current.wind_mph,
-        precipitation: weatherData.current.precip_in,
+        wind_speed: getSpeed(weatherData.current.wind_mph, weatherData.current.wind_kph),
+        precipitation: getPrecip(weatherData.current.precip_in, weatherData.current.precip_mm),
         condition: weatherData.current.condition.text,
         description: weatherData.current.condition.text,
         recorded_at: new Date(weatherData.current.last_updated)
@@ -96,14 +103,14 @@ export async function GET(request: NextRequest) {
     if (weatherData.forecast && weatherData.forecast.forecastday) {
       forecast = weatherData.forecast.forecastday.map(day => ({
         date: day.date,
-        maxTemp: day.day.maxtemp_f,
-        minTemp: day.day.mintemp_f,
+        maxTemp: getTemp(day.day.maxtemp_c, day.day.maxtemp_f),
+        minTemp: getTemp(day.day.mintemp_c, day.day.mintemp_f),
         condition: day.day.condition.text.toLowerCase().replace(/\s+/g, '-'),
         description: day.day.condition.text,
         icon: day.day.condition.icon,
         chanceOfRain: day.day.daily_chance_of_rain,
         humidity: day.day.avghumidity,
-        windSpeed: day.day.maxwind_mph
+        windSpeed: getSpeed(day.day.maxwind_mph, day.day.maxwind_kph)
       }));
     }
 
@@ -140,19 +147,20 @@ export async function GET(request: NextRequest) {
     // Return formatted weather data
     return NextResponse.json({
       location: `${weatherData.location.name}, ${weatherData.location.region}`,
-      temperature: weatherData.current.temp_f,
+      temperature: getTemp(weatherData.current.temp_c, weatherData.current.temp_f),
       humidity: weatherData.current.humidity,
-      windSpeed: weatherData.current.wind_mph,
-      precipitation: weatherData.current.precip_in,
+      windSpeed: getSpeed(weatherData.current.wind_mph, weatherData.current.wind_kph),
+      precipitation: getPrecip(weatherData.current.precip_in, weatherData.current.precip_mm),
       condition: weatherData.current.condition.text.toLowerCase().replace(/\s+/g, '-'),
       description: weatherData.current.condition.text,
       icon: weatherData.current.condition.icon,
       lastUpdated: weatherData.current.last_updated,
       uv: weatherData.current.uv,
-      feelsLike: weatherData.current.feelslike_f,
-      visibility: weatherData.current.vis_miles,
+      feelsLike: getTemp(weatherData.current.feelslike_c, weatherData.current.feelslike_f),
+      visibility: getDistance(weatherData.current.vis_miles, weatherData.current.vis_km),
       forecast: forecast,
-      astro: astroData
+      astro: astroData,
+      unit: unit // Include the unit in the response
     });
 
   } catch (error) {

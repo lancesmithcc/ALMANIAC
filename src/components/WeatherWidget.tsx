@@ -27,6 +27,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
   const [locationMethod, setLocationMethod] = useState<'gps' | 'ip' | 'manual'>('gps');
   const [showLocationSettings, setShowLocationSettings] = useState(false);
   const [manualLocation, setManualLocation] = useState<string>('');
+  const [temperatureUnit, setTemperatureUnit] = useState<'celsius' | 'fahrenheit'>('celsius');
 
   const getUserLocation = useCallback((): Promise<{ lat: number; lon: number } | null> => {
     return new Promise((resolve) => {
@@ -79,7 +80,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
         }
       }
       
-      const response = await fetch(`/api/weather?location=${encodeURIComponent(locationParam)}&forecast=true`);
+      const response = await fetch(`/api/weather?location=${encodeURIComponent(locationParam)}&forecast=true&unit=${temperatureUnit}`);
       if (!response.ok) {
         throw new Error('Failed to fetch weather data');
       }
@@ -97,7 +98,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
     } finally {
       setLoading(false);
     }
-  }, [getUserLocation]);
+  }, [getUserLocation, temperatureUnit]);
 
   useEffect(() => {
     // Check if there's a saved manual location
@@ -106,6 +107,13 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
       setManualLocation(savedLocation);
       setLocationMethod('manual');
     }
+    
+    // Check for saved temperature unit preference
+    const savedUnit = localStorage.getItem('almaniac-temperature-unit') as 'celsius' | 'fahrenheit';
+    if (savedUnit) {
+      setTemperatureUnit(savedUnit);
+    }
+    
     fetchWeatherData();
   }, [fetchWeatherData]);
 
@@ -126,6 +134,13 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
     fetchWeatherData();
   };
 
+  const toggleTemperatureUnit = () => {
+    const newUnit = temperatureUnit === 'celsius' ? 'fahrenheit' : 'celsius';
+    setTemperatureUnit(newUnit);
+    localStorage.setItem('almaniac-temperature-unit', newUnit);
+    fetchWeatherData();
+  };
+
   const getWeatherIcon = (condition: string) => {
     const conditionLower = condition.toLowerCase();
     if (conditionLower.includes('sunny') || conditionLower.includes('clear')) {
@@ -138,6 +153,10 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
       return <Sun className="w-8 h-8 text-yellow-400" />;
     }
   };
+
+  const getTempUnit = () => temperatureUnit === 'celsius' ? '°C' : '°F';
+  const getSpeedUnit = () => temperatureUnit === 'celsius' ? 'km/h' : 'mph';
+  const getDistanceUnit = () => temperatureUnit === 'celsius' ? 'km' : 'mi';
   
   // Function to return astrological symbols for planets
   const getAstrologySymbol = (planet: string): string => {
@@ -253,6 +272,13 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
             {weather?.location}
           </div>
           <button 
+            onClick={toggleTemperatureUnit}
+            className="px-2 py-1 text-xs font-medium bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white rounded transition-colors"
+            title={`Switch to ${temperatureUnit === 'celsius' ? 'Fahrenheit' : 'Celsius'}`}
+          >
+            {getTempUnit()}
+          </button>
+          <button 
             onClick={() => setShowLocationSettings(true)}
             className="p-1 text-gray-400 hover:text-white transition-colors"
             title="Location settings"
@@ -324,9 +350,9 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400">Temperature</p>
-              <p className="text-2xl font-bold text-orange-400">{weather?.temperature}°F</p>
+              <p className="text-2xl font-bold text-orange-400">{Math.round(weather?.temperature || 0)}{getTempUnit()}</p>
               {weather?.feelsLike && (
-                <p className="text-xs text-gray-500">Feels like {weather.feelsLike}°F</p>
+                <p className="text-xs text-gray-500">Feels like {Math.round(weather.feelsLike)}{getTempUnit()}</p>
               )}
             </div>
             <Thermometer className="w-8 h-8 text-orange-400" />
@@ -349,7 +375,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400">Wind Speed</p>
-              <p className="text-2xl font-bold text-emerald-400">{weather?.windSpeed} mph</p>
+              <p className="text-2xl font-bold text-emerald-400">{Math.round(weather?.windSpeed || 0)} {getSpeedUnit()}</p>
             </div>
             <Wind className="w-8 h-8 text-emerald-400" />
           </div>
@@ -462,7 +488,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
             {weather?.visibility && (
               <div className="p-4 bg-gray-800/30 rounded-lg">
                 <p className="text-sm text-gray-400">Visibility</p>
-                <p className="text-lg font-semibold text-cyan-400">{weather.visibility} mi</p>
+                <p className="text-lg font-semibold text-cyan-400">{Math.round(weather.visibility)} {getDistanceUnit()}</p>
               </div>
             )}
             <div className="p-4 bg-gray-800/30 rounded-lg">
@@ -527,7 +553,7 @@ export default function WeatherWidget({ detailed = false }: WeatherWidgetProps) 
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-500">💨 Wind:</span>
-                            <span className="text-emerald-400">{Math.round(day.windSpeed)} mph</span>
+                            <span className="text-emerald-400">{Math.round(day.windSpeed)} {getSpeedUnit()}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-500">💧 Humidity:</span>

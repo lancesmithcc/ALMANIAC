@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
             {pld.dataKey === 'avg_temp' && <Thermometer className="w-3 h-3 mr-1" />}
             {pld.dataKey === 'total_precip' && <CloudRain className="w-3 h-3 mr-1" />}
             {pld.dataKey === 'avg_humidity' && <Droplets className="w-3 h-3 mr-1" />}
-            {`${pld.name}: ${pld.value.toFixed(1)}${pld.dataKey === 'avg_temp' ? '°F' : pld.dataKey === 'total_precip' ? 'in' : '%'}`}
+            {`${pld.name}: ${pld.value.toFixed(1)}${pld.dataKey === 'avg_temp' ? '°C' : pld.dataKey === 'total_precip' ? 'mm' : '%'}`}
           </div>
         ))}
       </div>
@@ -141,7 +141,7 @@ export default function WeatherTrendsChart({ initialPeriod = '30' }: WeatherTren
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Temperature Chart */}
         <div className="h-80">
-          <h4 className="text-md font-medium text-emerald-400 mb-2 text-center">Average Temperature (°F)</h4>
+          <h4 className="text-md font-medium text-emerald-400 mb-2 text-center">Average Temperature (°C)</h4>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trends} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -156,7 +156,7 @@ export default function WeatherTrendsChart({ initialPeriod = '30' }: WeatherTren
 
         {/* Precipitation Chart */}
         <div className="h-80">
-          <h4 className="text-md font-medium text-emerald-400 mb-2 text-center">Total Precipitation (in)</h4>
+          <h4 className="text-md font-medium text-emerald-400 mb-2 text-center">Total Precipitation (mm)</h4>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={trends} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
