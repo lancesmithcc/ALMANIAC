@@ -6,7 +6,8 @@ export interface Plant {
   plant_type: string;
   variety?: string;
   planting_date: string | Date;
-  location: string;
+  location: string; // Keep for backward compatibility
+  location_id?: string; // New field for garden location reference
   notes?: string;
   health_status: 'excellent' | 'good' | 'fair' | 'poor';
   stage: 'seed' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest';
@@ -290,7 +291,8 @@ export interface PlantFormData {
   plant_type: string;
   variety?: string;
   planting_date: string;
-  location: string;
+  location: string; // Keep for backward compatibility
+  location_id?: string; // New field for garden location reference
   notes?: string;
   health_status: 'excellent' | 'good' | 'fair' | 'poor';
   stage: 'seed' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest';

@@ -335,10 +335,19 @@ Implementing plant editing capabilities and garden location management with note
 - [x] Add location distribution insights to growth trends
 - [x] Enhance AI recommendations with location-specific advice
 
+### ✅ Database & API Fixes
+- [x] **FIXED:** Garden locations API 500 error - database table was missing
+- [x] Run database initialization to create garden_locations table
+- [x] Create migration to add location_id column to plants table
+- [x] Update Plant and PlantFormData interfaces to support location_id
+- [x] Update database functions to handle location_id field
+- [x] Update PlantEntryForm to use garden location IDs instead of just text
+
 ### ✅ UI Integration & Testing
 - [x] Add GardenLocationsManager to main dashboard/navigation
 - [x] Build successful with no TypeScript errors
 - [x] Implement location-based plant grouping display
+- [x] Fix garden locations API and database issues
 - [ ] Test plant editing functionality end-to-end
 - [ ] Test garden location CRUD operations
 - [ ] Verify AI insights include location-specific recommendations
@@ -391,11 +400,13 @@ All core functionality implemented and integrated. AI insights now fully enhance
 - **Plant Editing**: Users can now edit existing plants with full form pre-population
 - **Garden Locations**: Comprehensive location management with microclimate tracking
 - **Location-Based Grouping**: Plants are visually organized by garden locations with proximity-based insights
+- **Database Integration**: Plants now properly reference garden locations via location_id foreign key
+- **API Fixes**: Garden locations API 500 errors resolved, database tables properly initialized
 - **AI Integration**: Location notes and data inform personalized AI recommendations
 - **Proximity-Based Companion Planting**: AI suggests companions specific to each garden location
 - **Location-Specific Insights**: AI analyzes plant distribution and provides targeted location advice
 - **Weather Integration**: Real-time weather data drives AI recommendations and alerts
 - **Moon Phase Guidance**: Lunar calendar integration for optimal planting/harvesting timing
 - **UI Integration**: New "Garden Locations" tab added to main navigation
-- **Database**: New garden_locations table with user-specific data
+- **Database**: New garden_locations table with user-specific data and proper foreign key relationships
 - **Build Status**: All TypeScript errors resolved, clean production builds

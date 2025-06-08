@@ -211,9 +211,9 @@ export async function createPlant(plant: Omit<Plant, 'id' | 'created_at' | 'upda
   const pool = getDbPool();
   const id = uuidv4();
   await pool.execute(
-    `INSERT INTO plants (id, user_id, plant_type, variety, planting_date, location, notes, health_status, stage)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, plant.user_id, plant.plant_type, plant.variety || null, plant.planting_date, plant.location, plant.notes || null, plant.health_status, plant.stage]
+    `INSERT INTO plants (id, user_id, plant_type, variety, planting_date, location, location_id, notes, health_status, stage)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, plant.user_id, plant.plant_type, plant.variety || null, plant.planting_date, plant.location, plant.location_id || null, plant.notes || null, plant.health_status, plant.stage]
   );
   return id;
 }

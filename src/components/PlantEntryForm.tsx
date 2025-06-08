@@ -15,6 +15,7 @@ interface PlantEntry {
   variety: string;
   planting_date: string;
   location: string;
+  location_id?: string;
   notes: string;
   health_status: 'excellent' | 'good' | 'fair' | 'poor';
   stage: 'seed' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest';
@@ -36,6 +37,7 @@ export default function PlantEntryForm() {
     variety: '',
     planting_date: '',
     location: '',
+    location_id: '',
     notes: '',
     health_status: 'good',
     stage: 'seed'
@@ -81,6 +83,7 @@ export default function PlantEntryForm() {
             variety: plant.variety || '',
             planting_date: formattedDate,
             location: plant.location,
+            location_id: plant.location_id || '',
             notes: plant.notes || '',
             health_status: plant.health_status,
             stage: plant.stage,
@@ -145,6 +148,7 @@ export default function PlantEntryForm() {
           variety: '',
           planting_date: '',
           location: '',
+          location_id: '',
           notes: '',
           health_status: 'good',
           stage: 'seed'
@@ -192,6 +196,7 @@ export default function PlantEntryForm() {
       variety: plant.variety,
       planting_date: plant.planting_date,
       location: plant.location,
+      location_id: plant.location_id || '',
       notes: plant.notes,
       health_status: plant.health_status,
       stage: plant.stage
@@ -206,6 +211,7 @@ export default function PlantEntryForm() {
       variety: '',
       planting_date: '',
       location: '',
+      location_id: '',
       notes: '',
       health_status: 'good',
       stage: 'seed'
@@ -356,15 +362,33 @@ export default function PlantEntryForm() {
                   {gardenLocations.length > 0 ? (
                     <div className="space-y-2">
                       <select
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        value={formData.location_id || formData.location}
+                        onChange={(e) => {
+                          const selectedValue = e.target.value;
+                          if (selectedValue === '__custom__') {
+                            setFormData({ ...formData, location: '__custom__', location_id: '' });
+                          } else {
+                            // Find the selected garden location
+                            const selectedLocation = gardenLocations.find(loc => loc.id === selectedValue);
+                            if (selectedLocation) {
+                              setFormData({ 
+                                ...formData, 
+                                location: selectedLocation.name, 
+                                location_id: selectedLocation.id 
+                              });
+                            } else {
+                              // Fallback for text-based locations
+                              setFormData({ ...formData, location: selectedValue, location_id: '' });
+                            }
+                          }
+                        }}
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         required
                         disabled={saving}
                       >
                         <option value="">Select a garden location...</option>
                         {gardenLocations.map((location) => (
-                          <option key={location.id} value={location.name}>
+                          <option key={location.id} value={location.id}>
                             {location.name} {location.description && `- ${location.description}`}
                           </option>
                         ))}
@@ -374,7 +398,7 @@ export default function PlantEntryForm() {
                         <input
                           type="text"
                           value=""
-                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value, location_id: '' })}
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           placeholder="Enter custom location..."
                           required
