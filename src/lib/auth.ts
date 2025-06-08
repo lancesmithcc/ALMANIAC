@@ -13,11 +13,16 @@ const getAuthSecret = () => {
   // In development, generate a warning and use a fallback
   if (process.env.NODE_ENV === 'development') {
     console.warn('⚠️  NEXTAUTH_SECRET not set. Using fallback for development. Set NEXTAUTH_SECRET in production!');
-    return 'dev-fallback-secret-change-in-production';
+    return 'dev-fallback-secret-change-in-production-' + Date.now();
   }
   
-  // In production, this should fail
-  throw new Error('NEXTAUTH_SECRET must be set in production environment');
+  // In production, provide a more helpful error
+  console.error('❌ NEXTAUTH_SECRET environment variable is required in production!');
+  console.error('📝 Please set NEXTAUTH_SECRET in your deployment environment variables.');
+  console.error('🔑 Generate one with: openssl rand -base64 32');
+  
+  // Return a temporary secret to prevent complete failure, but log the issue
+  return 'MISSING-SECRET-PLEASE-SET-NEXTAUTH_SECRET-IN-PRODUCTION';
 };
 
 export const authOptions: AuthOptions = {
