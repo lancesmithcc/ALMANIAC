@@ -557,54 +557,96 @@ export async function POST(request: NextRequest) {
                   'Authorization': `Bearer ${apiKey}`,
                   'Content-Type': 'application/json'
                 },
-                timeout: 10000 // Reduced timeout to fail faster
+                timeout: 8000, // Reduced timeout to 8 seconds
+                validateStatus: function (status) {
+                  // Only accept 200 status, reject everything else to avoid HTML responses
+                  return status === 200;
+                }
               }
             );
-            if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
+            
+            // Validate response structure before accessing
+            if (response.data && 
+                response.data.choices && 
+                Array.isArray(response.data.choices) && 
+                response.data.choices.length > 0 && 
+                response.data.choices[0].message && 
+                response.data.choices[0].message.content) {
               aiResponseContent = response.data.choices[0].message.content;
               console.log('DeepSeek API request successful.');
               break;
             } else {
+              console.error('Invalid response structure from DeepSeek API:', JSON.stringify(response.data));
               throw new Error('Invalid response structure from DeepSeek API');
             }
           } catch (error) {
             let errorMessage = 'Unknown error';
-            if (error instanceof Error) {
+            
+            if (axios.isAxiosError(error)) {
+              if (error.code === 'ECONNABORTED') {
+                errorMessage = 'Request timeout';
+              } else if (error.response) {
+                errorMessage = `HTTP ${error.response.status}: ${error.response.statusText}`;
+                console.error('DeepSeek API HTTP error:', error.response.status, error.response.statusText);
+              } else if (error.request) {
+                errorMessage = 'Network error - no response received';
+                console.error('DeepSeek API network error:', error.message);
+              } else {
+                errorMessage = error.message;
+              }
+            } else if (error instanceof Error) {
               errorMessage = error.message;
             }
+            
             console.error(`DeepSeek API attempt ${attempts}/${maxAttempts} failed:`, errorMessage);
             
             if (attempts >= maxAttempts) {
               console.log('All DeepSeek API attempts failed, using enhanced fallback.');
               break; // Don't throw, just use fallback
             }
+            
+            // Wait before retry with exponential backoff
             await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
           }
         }
 
         // If we got AI response, try to parse it
         if (aiResponseContent) {
-          console.log('Received raw response from DeepSeek AI.');
+          console.log('Received raw response from DeepSeek AI, attempting to parse...');
           
-          // Pre-process to remove markdown code fences if present
-          let cleanedResponse = aiResponseContent;
-          if (cleanedResponse.startsWith("```json")) {
-            cleanedResponse = cleanedResponse.substring(7);
-            if (cleanedResponse.endsWith("```")) {
-              cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
-            }
-          }
-          cleanedResponse = cleanedResponse.trim();
-
-          // Try to parse the AI response
           try {
+            // Pre-process to remove markdown code fences if present
+            let cleanedResponse = aiResponseContent.trim();
+            if (cleanedResponse.startsWith("```json")) {
+              cleanedResponse = cleanedResponse.substring(7);
+              if (cleanedResponse.endsWith("```")) {
+                cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
+              }
+            }
+            cleanedResponse = cleanedResponse.trim();
+
+            // Validate it looks like JSON before parsing
+            if (!cleanedResponse.startsWith('{') || !cleanedResponse.endsWith('}')) {
+              throw new Error('Response does not appear to be valid JSON format');
+            }
+
             const aiResult = JSON.parse(cleanedResponse);
-            console.log('Successfully parsed AI response, using enhanced AI insights.');
-            analysisResult = aiResult; // Use AI result instead of fallback
+            
+            // Validate the parsed result has expected structure
+            if (aiResult && typeof aiResult === 'object' && aiResult.recommendations) {
+              console.log('Successfully parsed AI response, using enhanced AI insights.');
+              analysisResult = aiResult; // Use AI result instead of fallback
+            } else {
+              console.error('Parsed AI response missing expected structure:', Object.keys(aiResult || {}));
+              throw new Error('AI response missing expected structure');
+            }
           } catch (parseError) {
             console.error('Failed to parse AI response, using enhanced fallback:', parseError);
+            console.error('Raw AI response (first 200 chars):', aiResponseContent.substring(0, 200));
             // Keep using the fallback we already generated
           }
+        } else {
+          console.log('No AI response received, using comprehensive fallback.');
         }
 
       } catch (aiError) {
