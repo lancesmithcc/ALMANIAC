@@ -1,9 +1,303 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { DeepSeekAnalysisResponse, WeatherData, AIRecommendation } from '@/types';
 import { getPlants, getRecentActivities, saveAIRecommendation, getActiveRecommendations } from '@/lib/database';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth";
+
+// Enhanced fallback function that always provides meaningful insights
+function generateFallbackInsights(
+  plants: any[], 
+  activities: any[], 
+  weatherData: any[], 
+  moonPhaseData: any
+): DeepSeekAnalysisResponse {
+  const season = getCurrentSeason();
+  
+  // Base recommendations that are always relevant
+  const baseRecommendations = [
+    {
+      type: 'permaculture_design',
+      priority: 'high' as const,
+      description: 'Establish a three-zone permaculture design: Zone 1 (daily herbs near kitchen), Zone 2 (vegetable garden), Zone 3 (fruit trees and perennials).',
+      reasoning: 'Permaculture zoning maximizes efficiency and creates sustainable food systems. This foundational design principle works for any garden size.',
+      confidence: 95,
+      timing: moonPhaseData ? `Optimal during ${moonPhaseData.phase} for planning activities` : 'Plan during new moon phases',
+      permaculture_principle: 'Design from patterns to details'
+    },
+    {
+      type: 'soil_management',
+      priority: 'high' as const,
+      description: 'Start or enhance your composting system with kitchen scraps, garden waste, and fallen leaves to build rich, living soil.',
+      reasoning: 'Healthy soil biology is the foundation of all successful gardens. Composting creates nutrient-rich amendments while reducing waste.',
+      confidence: 95,
+      timing: 'Year-round activity, intensify during waning moon phases',
+      permaculture_principle: 'Care for the earth'
+    },
+    {
+      type: 'companion_planting',
+      priority: 'medium' as const,
+      description: 'Plant marigolds, nasturtiums, and herbs like basil throughout your garden to attract beneficial insects and deter pests naturally.',
+      reasoning: 'Companion planting creates beneficial relationships between plants and reduces the need for external inputs.',
+      confidence: 90,
+      timing: moonPhaseData?.moon_sign_element === 'Earth' ? 'Excellent timing with Earth element moon' : 'Best during earth sign moons',
+      permaculture_principle: 'Integrate rather than segregate'
+    }
+  ];
+
+  // Add moon-specific recommendations if we have moon data
+  if (moonPhaseData) {
+    baseRecommendations.push({
+      type: 'moon_timing',
+      priority: 'medium' as const,
+      description: `Current ${moonPhaseData.phase} in ${moonPhaseData.zodiac_sign} is ideal for: ${moonPhaseData.optimal_activities.slice(0, 3).join(', ')}`,
+      reasoning: `${moonPhaseData.planting_guidance} The ${moonPhaseData.moon_sign_element} element enhances ${moonPhaseData.moon_sign_element.toLowerCase()}-related activities.`,
+      confidence: 85,
+      timing: `Active now during ${moonPhaseData.phase}`,
+      permaculture_principle: 'Observe and interact'
+    });
+  }
+
+  // Add plant-specific recommendations if we have plants
+  if (plants.length > 0) {
+    const plantTypes = [...new Set(plants.map(p => p.plant_type))];
+    
+    baseRecommendations.push({
+      type: 'watering',
+      priority: 'medium' as const,
+      description: `Water your ${plantTypes.join(', ')} deeply but less frequently to encourage strong root development.`,
+      reasoning: 'Deep, infrequent watering promotes drought resistance and healthier root systems compared to frequent shallow watering.',
+      confidence: 90,
+      timing: moonPhaseData?.moon_sign_element === 'Water' ? 'Excellent timing with Water element moon' : 'Best during water sign moons (Cancer, Scorpio, Pisces)',
+      permaculture_principle: 'Use renewable resources'
+    });
+
+    // Add harvest recommendations for mature plants
+    const maturePlants = plants.filter(p => p.stage === 'fruiting' || p.stage === 'harvest');
+    if (maturePlants.length > 0) {
+      baseRecommendations.push({
+        type: 'harvesting',
+        priority: 'high' as const,
+        description: `Harvest your ${maturePlants.map(p => p.plant_type).join(', ')} during the early morning for best flavor and storage life.`,
+        reasoning: 'Morning harvesting captures plants at peak hydration and sugar content, before heat stress affects quality.',
+        confidence: 95,
+        timing: moonPhaseData?.phase === 'Full Moon' ? 'Perfect timing - full moon enhances plant potency' : 'Best during full moon for maximum potency',
+        permaculture_principle: 'Obtain a yield'
+      });
+    }
+  }
+
+  // Season-specific recommendations
+  const seasonalRec = getSeasonalRecommendation(season, moonPhaseData);
+  if (seasonalRec) {
+    baseRecommendations.push(seasonalRec);
+  }
+
+  // Generate plant astrology readings
+  const plantAstrology = plants.length > 0 ? plants.map(plant => ({
+    plant: `${plant.plant_type} (${plant.variety || 'N/A'})`,
+    astrological_profile: getPlantAstrologicalProfile(plant.plant_type),
+    current_influence: moonPhaseData ? 
+      `Current ${moonPhaseData.zodiac_sign} moon in ${moonPhaseData.moon_sign_element} element ${getPlantMoonInfluence(plant.plant_type, moonPhaseData)}` : 
+      'Consult lunar calendar for optimal care timing',
+    recommendations: getPlantAstrologicalRecommendations(plant.plant_type, moonPhaseData)
+  })) : [
+    {
+      plant: 'General Garden',
+      astrological_profile: 'All plants benefit from lunar and planetary timing. Start observing how your plants respond to different moon phases.',
+      current_influence: moonPhaseData ? 
+        `Current ${moonPhaseData.phase} in ${moonPhaseData.zodiac_sign} brings ${moonPhaseData.energy_description.toLowerCase()}` : 
+        'Begin observing moon phases and their effects on your garden',
+      recommendations: [
+        'Start a lunar gardening journal to track plant responses',
+        'Plant seeds during new moons for strong root development',
+        'Harvest during full moons for maximum potency and flavor',
+        'Prune during waning moons for healthy regrowth'
+      ]
+    }
+  ];
+
+  return {
+    recommendations: baseRecommendations,
+    insights: {
+      growth_trends: [
+        plants.length > 0 ? 
+          `You have ${plants.length} plants in various stages - focus on creating beneficial relationships between them` :
+          'Start with easy-to-grow plants like herbs and leafy greens to build confidence',
+        'Implement polyculture systems for increased biodiversity and resilience',
+        'Focus on perennial food systems for long-term sustainability',
+        season === 'spring' ? 'Spring energy supports rapid growth and new plantings' :
+        season === 'summer' ? 'Summer abundance - focus on maintenance and harvesting' :
+        season === 'fall' ? 'Fall preparation - plant cover crops and prepare for winter' :
+        'Winter planning - design improvements and seed starting indoors'
+      ],
+      weather_impacts: [
+        weatherData.length > 0 ? 
+          'Use current weather patterns to guide your watering and protection strategies' :
+          'Monitor local weather patterns to optimize plant care timing',
+        'Implement rainwater harvesting during wet seasons',
+        'Create microclimates for season extension and plant protection',
+        'Use mulching to conserve moisture and regulate soil temperature'
+      ],
+      health_observations: [
+        plants.length > 0 ? 
+          'Diverse plantings create natural pest control through beneficial insects' :
+          'Plan for plant diversity to create natural pest control systems',
+        'Companion plants enhance each other\'s growth and disease resistance',
+        'Healthy soil biology prevents most plant diseases naturally',
+        'Regular observation helps catch issues early when they\'re easier to address'
+      ],
+      permaculture_opportunities: [
+        'Design food forests with multiple canopy layers for maximum productivity',
+        'Install greywater systems for water recycling and conservation',
+        'Create habitat corridors for beneficial wildlife and pollinators',
+        'Establish seed saving and plant propagation systems for self-reliance',
+        'Build community connections through seed swaps and knowledge sharing'
+      ],
+      astrological_influences: [
+        moonPhaseData ? 
+          `${moonPhaseData.zodiac_sign} moon in ${moonPhaseData.moon_sign_element} element enhances ${moonPhaseData.moon_sign_element.toLowerCase()}-related activities` : 
+          'Moon sign influences plant growth patterns and optimal timing',
+        moonPhaseData ? 
+          `Current moon phase (${moonPhaseData.phase}) energy: ${moonPhaseData.energy_description}` : 
+          'Lunar phases affect plant energy and growth cycles',
+        'Plant according to astrological correspondences for enhanced vitality',
+        'Time harvesting with full moons for maximum potency',
+        'Use waning moons for pruning and soil preparation work'
+      ]
+    },
+    alerts: activities.length === 0 ? [
+      {
+        type: 'info' as const,
+        message: 'Start logging your garden activities to get more personalized recommendations',
+        plant_id: undefined
+      }
+    ] : [],
+    moon_guidance: moonPhaseData ? [
+      `Current Phase: ${moonPhaseData.phase} (${moonPhaseData.illumination}% illuminated)`,
+      `Zodiac Sign: ${moonPhaseData.zodiac_sign} (${moonPhaseData.moon_sign_element} element)`,
+      `Optimal Activities: ${moonPhaseData.optimal_activities.join(', ')}`,
+      `Planting Guidance: ${moonPhaseData.planting_guidance}`,
+      `Energy Focus: ${moonPhaseData.energy_description}`,
+      `Next 3 days: Continue ${moonPhaseData.moon_sign_element.toLowerCase()}-element activities`
+    ] : [
+      'Follow lunar calendar for optimal timing',
+      'New moon: Planning and seed starting',
+      'Waxing moon: Growth and transplanting', 
+      'Full moon: Harvesting and preservation',
+      'Waning moon: Pruning and soil work',
+      'Track moon phases to optimize your garden activities'
+    ],
+    plant_astrology: plantAstrology
+  };
+}
+
+// Helper functions
+function getCurrentSeason(): string {
+  const month = new Date().getMonth();
+  if (month >= 2 && month <= 4) return 'spring';
+  if (month >= 5 && month <= 7) return 'summer';
+  if (month >= 8 && month <= 10) return 'fall';
+  return 'winter';
+}
+
+function getSeasonalRecommendation(season: string, _moonPhaseData: any) {
+  const seasonalAdvice = {
+    spring: {
+      type: 'planting',
+      priority: 'high' as const,
+      description: 'Spring is perfect for starting seeds indoors and preparing garden beds. Focus on cool-season crops like lettuce, peas, and radishes.',
+      reasoning: 'Spring energy supports new growth and rapid development. Cool-season crops thrive in moderate temperatures.',
+      confidence: 90,
+      timing: 'Plant cool-season crops 2-4 weeks before last frost',
+      permaculture_principle: 'Observe and interact'
+    },
+    summer: {
+      type: 'water_management',
+      priority: 'high' as const,
+      description: 'Implement deep mulching and efficient watering systems. Focus on heat-tolerant plants and succession planting.',
+      reasoning: 'Summer heat requires water conservation strategies and careful plant selection for continued productivity.',
+      confidence: 90,
+      timing: 'Water early morning or evening to reduce evaporation',
+      permaculture_principle: 'Use renewable resources'
+    },
+    fall: {
+      type: 'soil_management',
+      priority: 'high' as const,
+      description: 'Plant cover crops, collect and compost fallen leaves, and prepare beds for winter protection.',
+      reasoning: 'Fall preparation sets the foundation for next year\'s success and protects soil biology through winter.',
+      confidence: 90,
+      timing: 'Plant cover crops 6-8 weeks before hard frost',
+      permaculture_principle: 'Care for the earth'
+    },
+    winter: {
+      type: 'permaculture_design',
+      priority: 'medium' as const,
+      description: 'Plan next year\'s garden layout, start seeds indoors, and maintain tools and infrastructure.',
+      reasoning: 'Winter is ideal for planning, learning, and preparing for the growing season ahead.',
+      confidence: 85,
+      timing: 'Start planning 2-3 months before spring planting',
+      permaculture_principle: 'Design from patterns to details'
+    }
+  };
+  
+  return seasonalAdvice[season as keyof typeof seasonalAdvice];
+}
+
+function getPlantAstrologicalProfile(plantType: string): string {
+  const profiles: { [key: string]: string } = {
+    tomato: 'Tomatoes are ruled by Venus and resonate with fire energy. They thrive with passionate care and respond well to lunar timing.',
+    lettuce: 'Lettuce is governed by the Moon and water element. It grows best when planted during water sign moons.',
+    basil: 'Basil is ruled by Mars and carries fire energy. It enhances the growth of nearby plants and loves warm, sunny conditions.',
+    carrot: 'Carrots are ruled by Mercury and earth element. They develop best when planted during earth sign moons.',
+    pepper: 'Peppers are ruled by Mars and fire element. They need warmth and respond well to passionate, attentive care.',
+    cucumber: 'Cucumbers are ruled by the Moon and water element. They thrive with consistent moisture and lunar timing.',
+    bean: 'Beans are ruled by Venus and air element. They fix nitrogen and create beneficial relationships with other plants.',
+    corn: 'Corn is ruled by the Sun and fire element. It stands tall and proud, providing structure for climbing plants.',
+    squash: 'Squash is ruled by the Moon and water element. It spreads abundantly and provides ground cover.',
+    herb: 'Herbs are generally ruled by Mercury and carry healing properties. They enhance both garden and human health.'
+  };
+  
+  return profiles[plantType.toLowerCase()] || 
+    `${plantType} carries unique planetary energies and benefits from lunar timing and astrological awareness in its care.`;
+}
+
+function getPlantMoonInfluence(plantType: string, moonPhaseData: any): string {
+  if (!moonPhaseData) return 'supports growth when aligned with lunar cycles';
+  
+  const element = moonPhaseData.moon_sign_element.toLowerCase();
+  const influences = {
+    fire: 'energizes growth and fruit development',
+    earth: 'strengthens roots and overall structure', 
+    air: 'enhances flowering and seed development',
+    water: 'improves nutrient uptake and leaf growth'
+  };
+  
+  return influences[element as keyof typeof influences] || 'brings beneficial cosmic energy';
+}
+
+function getPlantAstrologicalRecommendations(plantType: string, moonPhaseData: any): string[] {
+  const baseRecs = [
+    'Water during water sign moons (Cancer, Scorpio, Pisces) for enhanced absorption',
+    'Harvest during full moons for maximum potency and flavor',
+    'Prune during waning moons for healthy regrowth and disease prevention'
+  ];
+  
+  if (moonPhaseData) {
+    const element = moonPhaseData.moon_sign_element.toLowerCase();
+    const elementRecs = {
+      fire: 'Focus on fruit development and energy-building activities',
+      earth: 'Strengthen root systems and overall plant structure',
+      air: 'Encourage flowering and pollinator attraction',
+      water: 'Enhance leaf growth and nutrient absorption'
+    };
+    
+    baseRecs.unshift(`Current ${element} element moon: ${elementRecs[element as keyof typeof elementRecs]}`);
+  }
+  
+  return baseRecs;
+}
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -18,14 +312,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     console.log('API Key check - Key exists:', !!apiKey, 'Key length:', apiKey?.length || 0);
-    if (!apiKey) {
-      console.error('DEEPSEEK_API_KEY environment variable not configured');
-      return NextResponse.json(
-        { error: 'DeepSeek API key not configured. Please set DEEPSEEK_API_KEY environment variable.' },
-        { status: 500 }
-      );
-    }
-
+    
     // Gather data for analysis
     const plants = await getPlants(userId);
     let weatherForAI: Array<{
@@ -71,281 +358,174 @@ export async function POST(request: NextRequest) {
 
     const activities = includeActivities ? await getRecentActivities(userId, 20) : [];
 
-    const systemPrompt = `You are Almaniac, an expert AI farming assistant specializing in permaculture design, biodynamic agriculture, astrological farming, and regenerative practices. You combine ancient wisdom with modern sustainable agriculture techniques.
+    // Always provide fallback insights first, then try to enhance with AI
+    let analysisResult = generateFallbackInsights(plants, activities, weatherForAI, moonPhaseData);
+    let aiResponseContent: string | undefined = undefined;
 
-    Your expertise includes:
-    - Permaculture principles and design patterns
-    - Biodynamic farming and lunar calendar guidance
-    - Astrological influences on plant growth and timing
-    - Companion planting and polyculture systems
-    - Soil biology and regenerative practices
-    - Natural pest management and beneficial ecosystems
-    - Water harvesting and conservation techniques
-    - Seasonal planning and crop rotation
-
-    Analyze the provided farm data (plants, activities, weather, moon phase) to generate comprehensive, actionable advice that integrates:
-    1. PERMACULTURE PRINCIPLES: Apply the 12 permaculture principles in your recommendations
-    2. MOON PHASE GUIDANCE: Use lunar cycles for optimal timing of farming activities
-    3. ASTROLOGICAL INFLUENCES: Consider zodiac signs and planetary influences on plant growth
-    4. WEATHER PATTERNS: Analyze weather trends for strategic planning
-    5. PLANT ASTROLOGY: Provide astrological readings for specific plants based on their characteristics
-
-    Structure your response as a JSON object with these keys:
-    - "recommendations": Array of detailed recommendations with permaculture focus
-    - "insights": Comprehensive analysis including astrological and biodynamic insights
-    - "alerts": Critical issues requiring immediate attention
-    - "moon_guidance": Specific lunar calendar advice for the next 7 days
-    - "plant_astrology": Astrological readings for each plant type in the garden
-    - "permaculture_opportunities": Specific design improvements and system integrations
-
-    For each recommendation, include:
-    - "type": Category (planting, harvesting, soil_management, pest_control, water_management, companion_planting, moon_timing, permaculture_design, astrological_timing)
-    - "priority": Urgency level (low, medium, high, urgent)
-    - "description": Detailed actionable advice
-    - "reasoning": Explanation including permaculture principles and astrological factors
-    - "confidence": 0-100 based on data quality and astrological alignment
-    - "timing": Optimal timing based on moon phase and astrological factors
-    - "permaculture_principle": Which of the 12 principles this applies to
-
-    Focus on creating resilient, self-sustaining systems that work with natural cycles and cosmic rhythms.`;
-
-    // Construct detailed user prompt with all available data
-    const userPromptParts = [
-        question || "Provide a comprehensive permaculture and astrological analysis for my farm, including moon phase guidance and plant astrology readings.",
-        
-        `CURRENT PLANTS: ${plants.length > 0 ? 
-          plants.map(p => `${p.plant_type} (${p.variety || 'N/A'}, Stage: ${p.stage}, Health: ${p.health_status}, Planted: ${p.planting_date || 'Unknown'})`).join('; ') 
-          : 'No plants logged.'}`,
-        
-        `WEATHER CONDITIONS: ${weatherForAI.length > 0 && weatherForAI[0].current && weatherForAI[0].astro ? 
-          `Temperature: ${weatherForAI[0].current.temperature}°C, Humidity: ${weatherForAI[0].current.humidity}%, Wind: ${weatherForAI[0].current.windSpeed}km/h, Condition: ${weatherForAI[0].current.description}, UV Index: ${weatherForAI[0].current.uv}, Sunrise: ${weatherForAI[0].astro.sunrise}, Sunset: ${weatherForAI[0].astro.sunset}` 
-          : 'Weather data not available.'}`,
-        
-        `MOON PHASE DATA: ${moonPhaseData ? 
-          `Phase: ${moonPhaseData.phase}, Illumination: ${moonPhaseData.illumination}%, Age: ${moonPhaseData.age} days, Zodiac Sign: ${moonPhaseData.zodiac_sign} (${moonPhaseData.moon_sign_element} element), Optimal Activities: ${moonPhaseData.optimal_activities.join(', ')}, Planting Guidance: ${moonPhaseData.planting_guidance}, Energy: ${moonPhaseData.energy_description}` 
-          : 'Moon phase data not available.'}`,
-        
-        `RECENT ACTIVITIES: ${activities.length > 0 ? 
-          activities.map(a => `${a.type}: ${a.description} (${a.timestamp})`).join('; ') 
-          : 'No recent activities logged.'}`,
-
-        `PERMACULTURE FOCUS AREAS:
-        - Observe and interact with natural patterns
-        - Catch and store energy (water, nutrients, solar)
-        - Obtain a yield while caring for earth and people
-        - Use renewable resources and value diversity
-        - Design from patterns to details
-        - Integrate rather than segregate systems
-        - Use small and slow solutions
-        - Value the marginal and use edges
-        - Creatively use and respond to change`,
-
-        `ASTROLOGICAL CONSIDERATIONS:
-        - Analyze plant compatibility with current moon sign
-        - Consider planetary influences on growth cycles
-        - Provide timing guidance based on lunar calendar
-        - Suggest plant-specific astrological care
-        - Integrate cosmic rhythms with farming practices`
-    ];
-    
-    const userPrompt = userPromptParts.join('\n\n');
-    console.log('USING ENHANCED PERMACULTURE & ASTROLOGY PROMPT FOR AI ANALYSIS');
-
-    // Call DeepSeek API with retry logic and timeout
-    console.log('Sending enhanced data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length, 'Moon data:', !!moonPhaseData);
-    
-    let aiResponseContent;
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError = null;
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      console.log(`DeepSeek API attempt ${attempts}/${maxAttempts}`);
+    // Try to enhance with AI if API key is available
+    if (apiKey) {
       try {
-        const response = await axios.post(
-          'https://api.deepseek.com/v1/chat/completions',
-          {
-            model: 'deepseek-chat',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.8, // Slightly higher for more creative astrological insights
-            max_tokens: 1500, // Increased for more detailed responses
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 12000 // Increased timeout for more complex analysis
-          }
-        );
-        if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
-          aiResponseContent = response.data.choices[0].message.content;
-          console.log('DeepSeek API request successful.');
-          lastError = null;
-          break;
-        } else {
-          throw new Error('Invalid response structure from DeepSeek API');
-        }
-      } catch (error) {
-        lastError = error;
-        let errorMessage = 'Unknown error';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
-        console.error(`DeepSeek API attempt ${attempts}/${maxAttempts} failed:`, errorMessage);
+        const systemPrompt = `You are Almaniac, an expert AI farming assistant specializing in permaculture design, biodynamic agriculture, astrological farming, and regenerative practices. You combine ancient wisdom with modern sustainable agriculture techniques.
+
+        Your expertise includes:
+        - Permaculture principles and design patterns
+        - Biodynamic farming and lunar calendar guidance
+        - Astrological influences on plant growth and timing
+        - Companion planting and polyculture systems
+        - Soil biology and regenerative practices
+        - Natural pest management and beneficial ecosystems
+        - Water harvesting and conservation techniques
+        - Seasonal planning and crop rotation
+
+        Analyze the provided farm data (plants, activities, weather, moon phase) to generate comprehensive, actionable advice that integrates:
+        1. PERMACULTURE PRINCIPLES: Apply the 12 permaculture principles in your recommendations
+        2. MOON PHASE GUIDANCE: Use lunar cycles for optimal timing of farming activities
+        3. ASTROLOGICAL INFLUENCES: Consider zodiac signs and planetary influences on plant growth
+        4. WEATHER PATTERNS: Analyze weather trends for strategic planning
+        5. PLANT ASTROLOGY: Provide astrological readings for specific plants based on their characteristics
+
+        Structure your response as a JSON object with these keys:
+        - "recommendations": Array of detailed recommendations with permaculture focus
+        - "insights": Comprehensive analysis including astrological and biodynamic insights
+        - "alerts": Critical issues requiring immediate attention
+        - "moon_guidance": Specific lunar calendar advice for the next 7 days
+        - "plant_astrology": Astrological readings for each plant type in the garden
+
+        For each recommendation, include:
+        - "type": Category (planting, harvesting, soil_management, pest_control, water_management, companion_planting, moon_timing, permaculture_design, astrological_timing)
+        - "priority": Urgency level (low, medium, high, urgent)
+        - "description": Detailed actionable advice
+        - "reasoning": Explanation including permaculture principles and astrological factors
+        - "confidence": 0-100 based on data quality and astrological alignment
+        - "timing": Optimal timing based on moon phase and astrological factors
+        - "permaculture_principle": Which of the 12 principles this applies to
+
+        Focus on creating resilient, self-sustaining systems that work with natural cycles and cosmic rhythms.`;
+
+        // Construct detailed user prompt with all available data
+        const userPromptParts = [
+            question || "Provide a comprehensive permaculture and astrological analysis for my farm, including moon phase guidance and plant astrology readings.",
+            
+            `CURRENT PLANTS: ${plants.length > 0 ? 
+              plants.map(p => `${p.plant_type} (${p.variety || 'N/A'}, Stage: ${p.stage}, Health: ${p.health_status}, Planted: ${p.planting_date || 'Unknown'})`).join('; ') 
+              : 'No plants logged.'}`,
+            
+            `WEATHER CONDITIONS: ${weatherForAI.length > 0 && weatherForAI[0].current && weatherForAI[0].astro ? 
+              `Temperature: ${weatherForAI[0].current.temperature}°C, Humidity: ${weatherForAI[0].current.humidity}%, Wind: ${weatherForAI[0].current.windSpeed}km/h, Condition: ${weatherForAI[0].current.description}, UV Index: ${weatherForAI[0].current.uv}, Sunrise: ${weatherForAI[0].astro.sunrise}, Sunset: ${weatherForAI[0].astro.sunset}` 
+              : 'Weather data not available.'}`,
+            
+            `MOON PHASE DATA: ${moonPhaseData ? 
+              `Phase: ${moonPhaseData.phase}, Illumination: ${moonPhaseData.illumination}%, Age: ${moonPhaseData.age} days, Zodiac Sign: ${moonPhaseData.zodiac_sign} (${moonPhaseData.moon_sign_element} element), Optimal Activities: ${moonPhaseData.optimal_activities.join(', ')}, Planting Guidance: ${moonPhaseData.planting_guidance}, Energy: ${moonPhaseData.energy_description}` 
+              : 'Moon phase data not available.'}`,
+            
+            `RECENT ACTIVITIES: ${activities.length > 0 ? 
+              activities.map(a => `${a.type}: ${a.description} (${a.timestamp})`).join('; ') 
+              : 'No recent activities logged.'}`,
+
+            `PERMACULTURE FOCUS AREAS:
+            - Observe and interact with natural patterns
+            - Catch and store energy (water, nutrients, solar)
+            - Obtain a yield while caring for earth and people
+            - Use renewable resources and value diversity
+            - Design from patterns to details
+            - Integrate rather than segregate systems
+            - Use small and slow solutions
+            - Value the marginal and use edges
+            - Creatively use and respond to change`,
+
+            `ASTROLOGICAL CONSIDERATIONS:
+            - Analyze plant compatibility with current moon sign
+            - Consider planetary influences on growth cycles
+            - Provide timing guidance based on lunar calendar
+            - Suggest plant-specific astrological care
+            - Integrate cosmic rhythms with farming practices`
+        ];
         
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            console.error('Axios request timed out.');
-          } else {
-            console.error('Axios error details:', error.response?.status, error.response?.data);
+        const userPrompt = userPromptParts.join('\n\n');
+        console.log('USING ENHANCED PERMACULTURE & ASTROLOGY PROMPT FOR AI ANALYSIS');
+
+        // Call DeepSeek API with retry logic and timeout
+        console.log('Sending enhanced data to DeepSeek AI. Plants:', plants.length, 'Weather/Astro items:', weatherForAI.length, 'Activities:', activities.length, 'Moon data:', !!moonPhaseData);
+        
+        let attempts = 0;
+        const maxAttempts = 2; // Reduced attempts to fail faster and use fallback
+
+        while (attempts < maxAttempts) {
+          attempts++;
+          console.log(`DeepSeek API attempt ${attempts}/${maxAttempts}`);
+          try {
+            const response = await axios.post(
+              'https://api.deepseek.com/v1/chat/completions',
+              {
+                model: 'deepseek-chat',
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.8,
+                max_tokens: 1500,
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                timeout: 10000 // Reduced timeout to fail faster
+              }
+            );
+            if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
+              aiResponseContent = response.data.choices[0].message.content;
+              console.log('DeepSeek API request successful.');
+              break;
+            } else {
+              throw new Error('Invalid response structure from DeepSeek API');
+            }
+          } catch (error) {
+            let errorMessage = 'Unknown error';
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            }
+            console.error(`DeepSeek API attempt ${attempts}/${maxAttempts} failed:`, errorMessage);
+            
+            if (attempts >= maxAttempts) {
+              console.log('All DeepSeek API attempts failed, using enhanced fallback.');
+              break; // Don't throw, just use fallback
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
           }
-        } else if (error instanceof Error) {
-          console.error('Error stack:', error.stack);
         }
 
-        if (attempts >= maxAttempts) {
-          console.error('All DeepSeek API attempts failed.');
-          throw lastError;
+        // If we got AI response, try to parse it
+        if (aiResponseContent) {
+          console.log('Received raw response from DeepSeek AI.');
+          
+          // Pre-process to remove markdown code fences if present
+          let cleanedResponse = aiResponseContent;
+          if (cleanedResponse.startsWith("```json")) {
+            cleanedResponse = cleanedResponse.substring(7);
+            if (cleanedResponse.endsWith("```")) {
+              cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
+            }
+          }
+          cleanedResponse = cleanedResponse.trim();
+
+          // Try to parse the AI response
+          try {
+            const aiResult = JSON.parse(cleanedResponse);
+            console.log('Successfully parsed AI response, using enhanced AI insights.');
+            analysisResult = aiResult; // Use AI result instead of fallback
+          } catch (parseError) {
+            console.error('Failed to parse AI response, using enhanced fallback:', parseError);
+            // Keep using the fallback we already generated
+          }
         }
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-      }
-    }
 
-    if (!aiResponseContent) {
-      throw new Error('Failed to get a response from DeepSeek API after multiple attempts.');
-    }
-    
-    console.log('Received raw response from DeepSeek AI.');
-    
-    // Pre-process to remove markdown code fences if present
-    let cleanedResponse = aiResponseContent;
-    if (cleanedResponse.startsWith("```json")) {
-      cleanedResponse = cleanedResponse.substring(7);
-      if (cleanedResponse.endsWith("```")) {
-        cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
+      } catch (aiError) {
+        console.error('AI enhancement failed, using comprehensive fallback:', aiError);
+        // Keep using the fallback we already generated
       }
-    }
-    cleanedResponse = cleanedResponse.trim();
-
-    // Parse the AI response
-    let analysisResult: DeepSeekAnalysisResponse;
-    try {
-      analysisResult = JSON.parse(cleanedResponse);
-      console.log('Successfully parsed AI response.');
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
-      console.error('Original AI Response:', aiResponseContent);
-      
-      // Enhanced fallback response with permaculture and astrological guidance
-      analysisResult = {
-        recommendations: [
-          {
-            type: 'permaculture_design',
-            priority: 'high',
-            description: 'Establish a three-zone permaculture design: Zone 1 (daily herbs near kitchen), Zone 2 (vegetable garden), Zone 3 (fruit trees and perennials).',
-            reasoning: 'Permaculture zoning maximizes efficiency and creates sustainable food systems. Current moon phase supports planning and design work.',
-            confidence: 95,
-            timing: moonPhaseData ? `Optimal during ${moonPhaseData.phase} for planning activities` : 'Plan during new moon phases',
-            permaculture_principle: 'Design from patterns to details'
-          },
-          {
-            type: 'companion_planting',
-            priority: 'high',
-            description: 'Plant the "Three Sisters" (corn, beans, squash) together to create a mutually beneficial polyculture system.',
-            reasoning: 'This indigenous companion planting technique demonstrates permaculture principles of beneficial relationships and maximizes yield in small spaces.',
-            confidence: 90,
-            timing: moonPhaseData?.moon_sign_element === 'Earth' ? 'Excellent timing with Earth element moon' : 'Best during earth sign moons',
-            permaculture_principle: 'Integrate rather than segregate'
-          },
-          {
-            type: 'moon_timing',
-            priority: 'medium',
-            description: moonPhaseData ? `Current ${moonPhaseData.phase} is ideal for: ${moonPhaseData.optimal_activities.join(', ')}` : 'Follow lunar calendar for optimal planting and harvesting times',
-            reasoning: 'Lunar cycles influence plant growth, water uptake, and energy flow. Aligning activities with moon phases enhances plant vitality.',
-            confidence: 85,
-            timing: moonPhaseData ? `Active now during ${moonPhaseData.phase}` : 'Follow lunar calendar',
-            permaculture_principle: 'Observe and interact'
-          },
-          {
-            type: 'soil_management',
-            priority: 'high',
-            description: 'Create a living soil ecosystem with compost, mycorrhizal fungi, and beneficial microorganisms.',
-            reasoning: 'Healthy soil biology is the foundation of permaculture. Living soil sequesters carbon, retains water, and provides optimal nutrition.',
-            confidence: 95,
-            timing: 'Year-round activity, intensify during waning moon phases',
-            permaculture_principle: 'Care for the earth'
-          }
-        ],
-        insights: {
-          growth_trends: [
-            'Implement polyculture systems for increased biodiversity and resilience',
-            'Focus on perennial food systems for long-term sustainability',
-            'Develop water-wise gardening techniques for climate adaptation'
-          ],
-          weather_impacts: [
-            'Use weather patterns to guide planting schedules and crop selection',
-            'Implement rainwater harvesting during wet seasons',
-            'Create microclimates for season extension'
-          ],
-          health_observations: [
-            'Diverse plantings create natural pest control through beneficial insects',
-            'Companion plants enhance each other\'s growth and disease resistance',
-            'Healthy soil biology prevents most plant diseases naturally'
-          ],
-          permaculture_opportunities: [
-            'Design food forests with multiple canopy layers',
-            'Install greywater systems for water recycling',
-            'Create habitat corridors for beneficial wildlife',
-            'Establish seed saving and plant propagation systems'
-          ],
-          astrological_influences: [
-            moonPhaseData ? `${moonPhaseData.zodiac_sign} moon in ${moonPhaseData.moon_sign_element} element enhances ${moonPhaseData.moon_sign_element.toLowerCase()}-related activities` : 'Moon sign influences plant growth patterns',
-            moonPhaseData ? `Current moon phase (${moonPhaseData.phase}) energy: ${moonPhaseData.energy_description}` : 'Lunar phases affect plant energy and growth cycles',
-            'Plant according to astrological correspondences for enhanced vitality',
-            'Time harvesting with full moons for maximum potency'
-          ]
-        },
-        alerts: [],
-        moon_guidance: moonPhaseData ? [
-          `Current Phase: ${moonPhaseData.phase} (${moonPhaseData.illumination}% illuminated)`,
-          `Zodiac Sign: ${moonPhaseData.zodiac_sign} (${moonPhaseData.moon_sign_element} element)`,
-          `Optimal Activities: ${moonPhaseData.optimal_activities.join(', ')}`,
-          `Planting Guidance: ${moonPhaseData.planting_guidance}`,
-          `Energy Focus: ${moonPhaseData.energy_description}`
-        ] : [
-          'Follow lunar calendar for optimal timing',
-          'New moon: Planning and seed starting',
-          'Waxing moon: Growth and transplanting',
-          'Full moon: Harvesting and preservation',
-          'Waning moon: Pruning and soil work'
-        ],
-        plant_astrology: plants.length > 0 ? plants.map(plant => ({
-          plant: `${plant.plant_type} (${plant.variety || 'N/A'})`,
-          astrological_profile: `${plant.plant_type} resonates with specific planetary energies and benefits from lunar timing`,
-          current_influence: moonPhaseData ? `Current ${moonPhaseData.zodiac_sign} moon supports ${plant.plant_type} growth` : 'Consult lunar calendar for optimal care timing',
-          recommendations: [
-            'Water during water sign moons for enhanced absorption',
-            'Harvest during full moons for maximum potency',
-            'Prune during waning moons for healthy regrowth'
-          ]
-        })) : [
-          {
-            plant: 'General Garden',
-            astrological_profile: 'All plants benefit from lunar and planetary timing',
-            current_influence: 'Begin observing moon phases and their effects on your garden',
-            recommendations: [
-              'Start a lunar gardening journal',
-              'Plant by moon signs for enhanced growth',
-              'Harvest medicinal plants during full moons'
-            ]
-          }
-        ]
-      };
+    } else {
+      console.log('No DeepSeek API key configured, using comprehensive fallback insights.');
     }
 
     // Save high-priority recommendations to database
@@ -378,6 +558,7 @@ export async function POST(request: NextRequest) {
         weather_records: weatherForAI.length,
         activities_reviewed: activities.length,
         moon_phase_included: !!moonPhaseData,
+        ai_enhanced: !!apiKey && aiResponseContent !== undefined,
         timestamp: new Date().toISOString()
       }
     });
@@ -385,17 +566,22 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('AI Analysis error (outer catch block):', error);
     
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error details:', error.response?.data);
-      const status = error.response?.status || 500;
-      const message = error.response?.data?.error?.message || 'Failed to analyze data with AI';
-      return NextResponse.json({ error: message }, { status });
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error during AI analysis' },
-      { status: 500 }
-    );
+    // Even if everything fails, provide basic fallback
+    const basicFallback = generateFallbackInsights([], [], [], null);
+    
+    return NextResponse.json({
+      success: true,
+      analysis: basicFallback,
+      metadata: {
+        plants_analyzed: 0,
+        weather_records: 0,
+        activities_reviewed: 0,
+        moon_phase_included: false,
+        ai_enhanced: false,
+        fallback_used: true,
+        timestamp: new Date().toISOString()
+      }
+    });
   }
 }
 
