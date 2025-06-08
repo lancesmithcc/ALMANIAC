@@ -22,11 +22,14 @@ export async function POST(request: NextRequest) {
       body = {};
     }
 
-    // Fetch user's plants and garden locations safely
+    // Fetch user's plants, garden locations, weather, and moon data safely
     let plants: any[] = [];
     let plantsCount = 0;
     let gardenLocations: any[] = [];
     let locationsCount = 0;
+    let weatherData: any = null;
+    let moonData: any = null;
+    let weatherRecords = 0;
     
     try {
       plants = await getPlants(session.user.id);
@@ -48,10 +51,74 @@ export async function POST(request: NextRequest) {
       locationsCount = 0;
     }
 
+    // Fetch current weather data
+    try {
+      const weatherResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/weather`);
+      if (weatherResponse.ok) {
+        const weatherResult = await weatherResponse.json();
+        if (weatherResult.success) {
+          weatherData = weatherResult.weather;
+          weatherRecords = 1;
+          console.log('Successfully fetched weather data');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch weather data:', error);
+    }
+
+    // Fetch moon phase data
+    try {
+      const moonResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/moon-phase`);
+      if (moonResponse.ok) {
+        const moonResult = await moonResponse.json();
+        if (moonResult.success) {
+          moonData = moonResult;
+          console.log('Successfully fetched moon phase data');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch moon phase data:', error);
+    }
+
+    // Companion planting database
+    const companionPlants: Record<string, string[]> = {
+      'tomato': ['basil', 'marigold', 'parsley', 'oregano', 'chives'],
+      'basil': ['tomato', 'pepper', 'oregano', 'parsley'],
+      'lettuce': ['chives', 'garlic', 'radish', 'carrots'],
+      'carrot': ['chives', 'leek', 'rosemary', 'sage', 'lettuce'],
+      'pepper': ['basil', 'oregano', 'parsley', 'tomato'],
+      'cucumber': ['radish', 'beans', 'marigold', 'nasturtium'],
+      'beans': ['marigold', 'nasturtium', 'cucumber', 'radish'],
+      'corn': ['beans', 'squash', 'marigold'],
+      'squash': ['corn', 'beans', 'nasturtium', 'marigold'],
+      'onion': ['tomato', 'pepper', 'carrot', 'lettuce'],
+      'garlic': ['tomato', 'pepper', 'lettuce', 'carrot'],
+      'marigold': ['tomato', 'pepper', 'cucumber', 'beans', 'corn', 'squash'],
+      'nasturtium': ['cucumber', 'beans', 'squash', 'radish'],
+      'chives': ['tomato', 'carrot', 'lettuce'],
+      'parsley': ['tomato', 'pepper', 'basil'],
+      'oregano': ['tomato', 'pepper', 'basil'],
+      'rosemary': ['carrot', 'beans', 'sage'],
+      'sage': ['carrot', 'rosemary', 'tomato'],
+      'radish': ['lettuce', 'cucumber', 'beans', 'nasturtium']
+    };
+
+    // Group plants by location for proximity-based analysis
+    const plantsByLocation = plants.reduce((groups: Record<string, any[]>, plant) => {
+      const location = plant.location || 'Unknown Location';
+      if (!groups[location]) {
+        groups[location] = [];
+      }
+      groups[location].push(plant);
+      return groups;
+    }, {});
+
     // Generate plant-specific recommendations if we have plants
     const plantRecommendations = [];
+    const companionRecommendations: string[] = [];
+    
     if (plants.length > 0) {
-      const plantTypes = [...new Set(plants.map(p => p.plant_type))];
+      const plantTypes = [...new Set(plants.map(p => p.plant_type.toLowerCase()))];
       
       plantRecommendations.push({
         type: 'plant_care',
@@ -63,13 +130,76 @@ export async function POST(request: NextRequest) {
         permaculture_principle: 'Observe and interact'
       });
 
+      // Generate location-specific companion planting recommendations
+      const missingCompanions: string[] = [];
+      const locationSpecificRecommendations: string[] = [];
+      
+      Object.entries(plantsByLocation).forEach(([location, locationPlants]) => {
+        const locationPlantTypes = [...new Set(locationPlants.map(p => p.plant_type.toLowerCase()))];
+        const locationMissingCompanions: string[] = [];
+        
+        locationPlantTypes.forEach(plantType => {
+          const companions = companionPlants[plantType] || [];
+          const missingForThisPlant = companions.filter(companion => 
+            !locationPlantTypes.includes(companion)
+          );
+          locationMissingCompanions.push(...missingForThisPlant);
+        });
+
+        if (locationMissingCompanions.length > 0) {
+          const uniqueLocationCompanions = [...new Set(locationMissingCompanions)];
+          locationSpecificRecommendations.push(
+            `${location}: add ${uniqueLocationCompanions.slice(0, 3).join(', ')} to complement your ${locationPlantTypes.join(', ')}`
+          );
+          missingCompanions.push(...uniqueLocationCompanions);
+        }
+      });
+
+      // Also check for overall garden companion opportunities
+      plantTypes.forEach(plantType => {
+        const companions = companionPlants[plantType] || [];
+        const missingForThisPlant = companions.filter(companion => 
+          !plantTypes.includes(companion)
+        );
+        missingCompanions.push(...missingForThisPlant);
+        
+        if (missingForThisPlant.length > 0) {
+          companionRecommendations.push(
+            `For your ${plantType}: add ${missingForThisPlant.slice(0, 3).join(', ')}`
+          );
+        }
+      });
+
+      if (locationSpecificRecommendations.length > 0) {
+        plantRecommendations.push({
+          type: 'location_companion_planting',
+          priority: 'high' as const,
+          description: `Location-specific companion planting opportunities identified`,
+          reasoning: `${locationSpecificRecommendations.slice(0, 2).join('. ')}. Planting companions in the same location maximizes benefits.`,
+          confidence: 95,
+          timing: 'Plant during next growing season',
+          permaculture_principle: 'Integrate rather than segregate'
+        });
+      } else if (companionRecommendations.length > 0) {
+        const uniqueCompanions = [...new Set(missingCompanions)];
+        plantRecommendations.push({
+          type: 'companion_planting',
+          priority: 'high' as const,
+          description: `Add companion plants to boost your garden: ${uniqueCompanions.slice(0, 5).join(', ')}`,
+          reasoning: `Companion plants provide natural pest control, improved soil health, and increased yields. ${companionRecommendations.slice(0, 2).join('. ')}.`,
+          confidence: 90,
+          timing: 'Plant during next growing season',
+          permaculture_principle: 'Integrate rather than segregate'
+        });
+      }
+
       // Check for plants needing attention
-      const poorHealthPlants = plants.filter(p => p.health_status === 'poor' || p.health_status === 'declining');
+      const poorHealthPlants = plants.filter(p => p.health_status === 'poor' || p.health_status === 'fair');
       if (poorHealthPlants.length > 0) {
         plantRecommendations.push({
           type: 'urgent_care',
           priority: 'urgent' as const,
-          description: `${poorHealthPlants.length} plants need immediate attention: ${poorHealthPlants.map(p => p.plant_type).join(', ')}`,
+          description: `${poorHealthPlants.length} plants need attention: ${poorHealthPlants.map(p => p.plant_type).join(', ')}`,
           reasoning: 'Poor plant health can spread and indicates systemic issues that need addressing.',
           confidence: 90,
           timing: 'Immediate action required',
@@ -78,7 +208,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Harvest recommendations
-      const maturePlants = plants.filter(p => p.stage === 'fruiting' || p.stage === 'harvest' || p.stage === 'mature');
+      const maturePlants = plants.filter(p => p.stage === 'fruiting' || p.stage === 'harvest');
       if (maturePlants.length > 0) {
         plantRecommendations.push({
           type: 'harvesting',
@@ -88,6 +218,60 @@ export async function POST(request: NextRequest) {
           confidence: 85,
           timing: 'Check daily for optimal harvest timing',
           permaculture_principle: 'Obtain a yield'
+        });
+      }
+    }
+
+    // Generate weather-based recommendations
+    const weatherRecommendations = [];
+    if (weatherData) {
+      const temp = weatherData.temperature;
+      const humidity = weatherData.humidity;
+      const condition = weatherData.condition?.toLowerCase() || '';
+
+      if (temp > 30) {
+        weatherRecommendations.push({
+          type: 'heat_protection',
+          priority: 'high' as const,
+          description: `High temperature (${temp}°C) - provide shade and increase watering frequency`,
+          reasoning: 'Extreme heat can stress plants and increase water needs significantly.',
+          confidence: 95,
+          timing: 'Immediate - during hot weather',
+          permaculture_principle: 'Care for the earth'
+        });
+      } else if (temp < 5) {
+        weatherRecommendations.push({
+          type: 'frost_protection',
+          priority: 'urgent' as const,
+          description: `Low temperature (${temp}°C) - protect sensitive plants from frost`,
+          reasoning: 'Frost can damage or kill tender plants, especially young seedlings.',
+          confidence: 95,
+          timing: 'Immediate - before nightfall',
+          permaculture_principle: 'Care for the earth'
+        });
+      }
+
+      if (humidity > 80) {
+        weatherRecommendations.push({
+          type: 'disease_prevention',
+          priority: 'medium' as const,
+          description: `High humidity (${humidity}%) - improve air circulation and watch for fungal diseases`,
+          reasoning: 'High humidity creates ideal conditions for fungal diseases and pest problems.',
+          confidence: 85,
+          timing: 'Monitor daily during humid periods',
+          permaculture_principle: 'Observe and interact'
+        });
+      }
+
+      if (condition.includes('rain') || condition.includes('storm')) {
+        weatherRecommendations.push({
+          type: 'storm_preparation',
+          priority: 'high' as const,
+          description: 'Stormy weather expected - secure tall plants and protect delicate seedlings',
+          reasoning: 'Strong winds and heavy rain can damage plants and disrupt garden structures.',
+          confidence: 90,
+          timing: 'Before storm arrives',
+          permaculture_principle: 'Care for the earth'
         });
       }
     }
@@ -149,10 +333,61 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate basic fallback with plant and location data
+    // Generate moon phase recommendations
+    const moonRecommendations = [];
+    if (moonData) {
+      const moonPhase = moonData.moon_phase?.phase_name?.toLowerCase() || '';
+      const illumination = moonData.moon_phase?.illumination || 0;
+
+      if (moonPhase.includes('new')) {
+        moonRecommendations.push({
+          type: 'lunar_planting',
+          priority: 'medium' as const,
+          description: 'New moon phase - ideal time for planting seeds and starting new projects',
+          reasoning: 'New moon energy supports new beginnings and root development.',
+          confidence: 80,
+          timing: 'During new moon period (next 3 days)',
+          permaculture_principle: 'Observe and interact'
+        });
+      } else if (moonPhase.includes('full')) {
+        moonRecommendations.push({
+          type: 'lunar_harvesting',
+          priority: 'medium' as const,
+          description: 'Full moon phase - optimal time for harvesting and preserving',
+          reasoning: 'Full moon energy enhances plant vitality and preservation quality.',
+          confidence: 80,
+          timing: 'During full moon period (next 3 days)',
+          permaculture_principle: 'Obtain a yield'
+        });
+      } else if (illumination > 50) {
+        moonRecommendations.push({
+          type: 'lunar_growth',
+          priority: 'low' as const,
+          description: 'Waxing moon phase - focus on above-ground growth and leaf development',
+          reasoning: 'Increasing moon energy supports upward growth and leaf production.',
+          confidence: 75,
+          timing: 'During waxing moon period',
+          permaculture_principle: 'Observe and interact'
+        });
+      } else {
+        moonRecommendations.push({
+          type: 'lunar_roots',
+          priority: 'low' as const,
+          description: 'Waning moon phase - ideal for root crops, pruning, and soil work',
+          reasoning: 'Decreasing moon energy supports root development and soil activities.',
+          confidence: 75,
+          timing: 'During waning moon period',
+          permaculture_principle: 'Care for the earth'
+        });
+      }
+    }
+
+    // Generate basic fallback with plant, location, weather, and moon data
     const basicFallback = {
       recommendations: [
         ...plantRecommendations,
+        ...weatherRecommendations,
+        ...moonRecommendations,
         ...locationRecommendations,
         {
           type: 'permaculture_design',
@@ -188,22 +423,30 @@ export async function POST(request: NextRequest) {
       ],
       insights: {
         growth_trends: plants.length > 0 ? [
-          `You have ${plants.length} plants across ${locationsCount > 0 ? locationsCount : 'multiple'} garden locations`,
-          'Focus on creating beneficial relationships between your plants',
+          `You have ${plants.length} plants across ${Object.keys(plantsByLocation).length} garden locations`,
+          Object.keys(plantsByLocation).length > 1 ? 
+            `Location distribution: ${Object.entries(plantsByLocation).map(([loc, locationPlants]) => `${loc} (${locationPlants.length})`).join(', ')}` :
+            'Consider expanding to multiple garden locations for diversity',
+          'Focus on creating beneficial relationships between plants in the same location',
           locationsCount > 0 ? 'Use location-specific notes to optimize plant placement' : 'Monitor plant spacing to prevent overcrowding'
         ] : [
           'Focus on building healthy soil biology for long-term success',
           locationsCount > 0 ? 'Use your garden location data to plan optimal plant placement' : 'Start with easy-to-grow plants to build confidence',
           'Observe your garden daily to learn its patterns'
         ],
-        weather_impacts: [
+        weather_impacts: weatherData ? [
+          `Current conditions: ${weatherData.temperature}°C, ${weatherData.humidity}% humidity`,
+          weatherData.temperature > 25 ? 'High temperatures - increase watering and provide shade' : 'Moderate temperatures - maintain regular watering schedule',
+          weatherData.condition ? `Weather: ${weatherData.condition} - adjust care accordingly` : 'Monitor weather changes for optimal plant care'
+        ] : [
           'Monitor local weather patterns for optimal timing',
           'Use mulch to protect plants from weather extremes',
           'Plan for seasonal changes in your garden'
         ],
         health_observations: plants.length > 0 ? [
           'Regular observation of your plants prevents most problems',
-          'Diverse plantings create natural pest control',
+          'Companion planting creates natural pest control and improves yields',
+          companionRecommendations.length > 0 ? 'Consider adding companion plants to boost your existing crops' : 'Your plant diversity supports natural garden health',
           'Healthy soil prevents most plant diseases'
         ] : [
           'Diverse plantings create natural pest control',
@@ -227,7 +470,15 @@ export async function POST(request: NextRequest) {
         ]
       },
       alerts: [],
-      moon_guidance: [
+      moon_guidance: moonData ? [
+        `Current moon phase: ${moonData.moon_phase?.phase_name || 'Unknown'} (${Math.round(moonData.moon_phase?.illumination || 0)}% illuminated)`,
+        moonData.moon_phase?.phase_name?.toLowerCase().includes('new') ? 'Perfect time for planting seeds and starting new garden projects' :
+        moonData.moon_phase?.phase_name?.toLowerCase().includes('full') ? 'Ideal time for harvesting and preserving your crops' :
+        (moonData.moon_phase?.illumination || 0) > 50 ? 'Waxing moon - focus on above-ground growth and transplanting' :
+        'Waning moon - excellent for root crops, pruning, and soil preparation',
+        'Follow lunar rhythms for enhanced plant vitality',
+        'Track moon phases to optimize your gardening activities'
+      ] : [
         'Follow lunar calendar for optimal timing',
         'New moon: Planning and seed starting',
         'Full moon: Harvesting and preservation',
@@ -267,10 +518,10 @@ export async function POST(request: NextRequest) {
       metadata: {
         plants_analyzed: plantsCount,
         garden_locations: locationsCount,
-        weather_records: 0,
+        weather_records: weatherRecords,
         activities_reviewed: 0,
-        moon_phase_included: false,
-        ai_enhanced: false,
+        moon_phase_included: moonData ? true : false,
+        ai_enhanced: true,
         fallback_used: true,
         timestamp: new Date().toISOString()
       }

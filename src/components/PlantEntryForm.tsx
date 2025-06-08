@@ -470,71 +470,130 @@ export default function PlantEntryForm() {
         </div>
       )}
 
-      {/* Entries List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {entries.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <div className="text-6xl mb-4">🌱</div>
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No plants yet</h3>
-            <p className="text-gray-500 mb-4">Start your farming journey by adding your first plant!</p>
-            <button
-              onClick={() => setIsFormOpen(true)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-colors"
-            >
-              Add Your First Plant
-            </button>
-          </div>
-        ) : (
-          entries.map((entry) => (
-            <div key={entry.id} className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold flex items-center">
-                    {getStageEmoji(entry.stage)} {entry.plant_type}
-                    {entry.variety && <span className="text-gray-400 ml-2">({entry.variety})</span>}
-                  </h3>
-                  <p className="text-sm text-gray-400">{entry.location}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className={`px-2 py-1 rounded text-xs font-medium border ${getHealthColor(entry.health_status)}`}>
-                    {entry.health_status}
+      {/* Entries List - Grouped by Location */}
+      {entries.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🌱</div>
+          <h3 className="text-xl font-semibold text-gray-400 mb-2">No plants yet</h3>
+          <p className="text-gray-500 mb-4">Start your farming journey by adding your first plant!</p>
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Add Your First Plant
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Group plants by location */}
+          {Object.entries(
+            entries.reduce((groups: Record<string, PlantEntry[]>, entry) => {
+              const location = entry.location || 'Unknown Location';
+              if (!groups[location]) {
+                groups[location] = [];
+              }
+              groups[location].push(entry);
+              return groups;
+            }, {})
+          )
+            .sort(([a], [b]) => a.localeCompare(b)) // Sort locations alphabetically
+            .map(([location, locationPlants]) => {
+              // Find matching garden location for additional info
+              const gardenLocation = gardenLocations.find(gl => gl.name === location);
+              
+              return (
+                <div key={location} className="space-y-4">
+                  {/* Location Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                        <h3 className="text-xl font-semibold text-emerald-400">
+                          📍 {location}
+                        </h3>
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        ({locationPlants.length} plant{locationPlants.length !== 1 ? 's' : ''})
+                      </div>
+                    </div>
+                    {gardenLocation && (
+                      <div className="text-xs text-gray-500 flex items-center space-x-2">
+                        {gardenLocation.light_conditions && (
+                          <span className="px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-400">
+                            {gardenLocation.light_conditions.replace('_', ' ')}
+                          </span>
+                        )}
+                        {gardenLocation.irrigation_type && gardenLocation.irrigation_type !== 'none' && (
+                          <span className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded text-blue-400">
+                            {gardenLocation.irrigation_type}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => editPlant(entry)}
-                    className="text-blue-400 hover:text-blue-300 transition-colors p-1"
-                    title="Edit plant"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => deletePlant(entry.id!)}
-                    className="text-red-400 hover:text-red-300 transition-colors p-1"
-                    title="Delete plant"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Planted:</span>
-                  <span>{new Date(entry.planting_date).toLocaleDateString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Stage:</span>
-                  <span className="capitalize">{entry.stage}</span>
-                </div>
-                {entry.notes && (
-                  <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-300">{entry.notes}</p>
+                  {/* Location Description */}
+                  {gardenLocation?.description && (
+                    <div className="text-sm text-gray-400 ml-5 mb-4">
+                      {gardenLocation.description}
+                    </div>
+                  )}
+
+                  {/* Plants in this location */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ml-5">
+                    {locationPlants.map((entry) => (
+                      <div key={entry.id} className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h4 className="text-lg font-semibold flex items-center">
+                              {getStageEmoji(entry.stage)} {entry.plant_type}
+                              {entry.variety && <span className="text-gray-400 ml-2">({entry.variety})</span>}
+                            </h4>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className={`px-2 py-1 rounded text-xs font-medium border ${getHealthColor(entry.health_status)}`}>
+                              {entry.health_status}
+                            </div>
+                            <button
+                              onClick={() => editPlant(entry)}
+                              className="text-blue-400 hover:text-blue-300 transition-colors p-1"
+                              title="Edit plant"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deletePlant(entry.id!)}
+                              className="text-red-400 hover:text-red-300 transition-colors p-1"
+                              title="Delete plant"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Planted:</span>
+                            <span>{new Date(entry.planting_date).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Stage:</span>
+                            <span className="capitalize">{entry.stage}</span>
+                          </div>
+                          {entry.notes && (
+                            <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
+                              <p className="text-sm text-gray-300">{entry.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 } 
