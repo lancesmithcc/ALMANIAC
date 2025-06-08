@@ -153,7 +153,7 @@
 
 ## Next Steps for User
 1. **IMMEDIATE:** Commit and push the enhanced AI system
-2. **TEST:** Try the new AI insights with permaculture and moon phase guidance
+2. **TEST:** Try the new Insights with permaculture and moon phase guidance
 3. **EXPLORE:** Check out the moon phase recommendations for optimal timing
 4. **EXPERIENCE:** Get astrological plant readings for your garden
 5. **IMPLEMENT:** Follow permaculture design suggestions for sustainable farming
@@ -194,7 +194,7 @@ NEXTAUTH_SECRET
 - [x] Activity logging
 - [x] Moon phase API with astrological data
 - [x] Enhanced AI system with permaculture and astrological guidance
-- [x] **AI insights always available** - Comprehensive fallback system ensures users get meaningful recommendations even with minimal data
+- [x] **Insights always available** - Comprehensive fallback system ensures users get meaningful recommendations even with minimal data
 
 ### Technical Improvements
 - [x] Fix all TypeScript build errors
@@ -212,7 +212,7 @@ NEXTAUTH_SECRET
 The app is fully functional with:
 - ✅ Working authentication system
 - ✅ Complete database structure
-- ✅ AI insights that **always provide value** regardless of data amount
+- ✅ Insights that **always provide value** regardless of data amount
 - ✅ Moon phase and astrological guidance
 - ✅ Permaculture recommendations
 - ✅ Weather integration

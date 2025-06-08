@@ -85,7 +85,7 @@ const AIInsights: React.FC = () => {
         throw new Error(analysisResult.error || 'Failed to parse AI analysis');
       }
     } catch (err) {
-      console.error('Error fetching AI insights:', err);
+      console.error('Error fetching Insights:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       setAnalysisData(null);
     } finally {
@@ -226,7 +226,7 @@ const AIInsights: React.FC = () => {
       {!isLoading && !error && !analysisData && (
         <div className="text-center text-gray-400 py-6 flex-grow flex flex-col justify-center items-center">
           <Brain className="w-12 h-12 text-gray-600 mb-3" />
-          <p>No AI insights available at the moment.</p>
+          <p>No Insights available at the moment.</p>
           <p className="text-xs text-gray-500">Try refreshing or add some plant data.</p>
         </div>
       )}

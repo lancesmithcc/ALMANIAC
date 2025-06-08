@@ -66,7 +66,7 @@ export default function Dashboard() {
             <WeatherTrendsChart />
           </div>
         );
-      case 'AI Insights':
+      case 'Insights':
         return <AIInsights />;
       default:
         return <p>Welcome to Almaniac! Select a tab to get started.</p>;

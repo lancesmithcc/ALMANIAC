@@ -670,7 +670,7 @@ export async function POST(request: NextRequest) {
             
             // Validate the parsed result has expected structure
             if (aiResult && typeof aiResult === 'object' && aiResult.recommendations) {
-              console.log('Successfully parsed AI response, using enhanced AI insights.');
+              console.log('Successfully parsed AI response, using enhanced Insights.');
               analysisResult = aiResult; // Use AI result instead of fallback
             } else {
               console.error('Parsed AI response missing expected structure:', Object.keys(aiResult || {}));

@@ -177,7 +177,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - Weather data provided by [WeatherAPI.com](https://www.weatherapi.com/)
-- AI insights powered by [DeepSeek](https://www.deepseek.com/)
+- Insights powered by [DeepSeek](https://www.deepseek.com/)
 - Icons by [Lucide](https://lucide.dev/)
 - Built with [Next.js](https://nextjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
 
