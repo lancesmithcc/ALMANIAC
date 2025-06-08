@@ -50,6 +50,7 @@
 - [x] **COMPLETED:** Integrate Moon Phase tracking with astrological data
 - [x] **ENHANCED:** AI now provides permaculture and astrological plant readings
 - [x] **FIXED:** AI Insights now load reliably without 502 errors
+- [x] **NEW:** Temperature unit toggle (Celsius default, Fahrenheit option)
 - [ ] Implement User Account Management (Password Change)
 
 ## UI/UX Components
@@ -112,6 +113,9 @@
 🌟 **MAJOR ENHANCEMENT COMPLETE:** AI system now includes comprehensive permaculture practices, moon phase guidance, and astrological plant readings!
 
 ## Recently Completed
+✅ **Temperature Unit Toggle:** Added Celsius/Fahrenheit toggle with Celsius as default
+✅ **User Preference Storage:** Temperature unit preference saved in localStorage
+✅ **Comprehensive Unit Support:** All weather displays (temp, wind, distance) update with unit toggle
 ✅ **502 Error Resolution:** Simplified AI analysis route to prevent server timeouts and memory issues
 ✅ **Lightweight AI Route:** Reduced file size from 40KB to minimal implementation for reliability
 ✅ **Guaranteed JSON Response:** AI endpoint now always returns valid JSON, never HTML error pages
@@ -269,4 +273,95 @@ The app is fully functional with:
 - **AI System**: Now includes comprehensive fallback that ensures users always receive meaningful insights, even with just 1-5 plants
 - **Fallback Features**: Permaculture design principles, seasonal guidance, moon phase timing, companion planting suggestions, and plant-specific astrological profiles
 - **Error Handling**: Robust system that gracefully handles API failures while still providing value
+- **Build Status**: All TypeScript errors resolved, clean production builds
+
+# Almaniac Plant Editing & Garden Locations Implementation
+
+## Overview
+Implementing plant editing capabilities and garden location management with notes for AI insights.
+
+## Tasks
+
+### ✅ Database Schema Updates
+- [x] Create garden_locations table with user-specific locations
+- [x] Add fields for notes, microclimate_notes, soil_type, light_conditions, irrigation_type
+- [x] Update TypeScript types for GardenLocation and GardenLocationFormData
+- [x] Add garden location CRUD functions to database.ts
+
+### ✅ API Routes
+- [x] Create /api/garden-locations route (GET, POST)
+- [x] Create /api/garden-locations/[locationId] route (GET, PUT, DELETE)
+- [x] Update database initialization to include garden_locations table
+
+### ✅ Plant Editing Features
+- [x] Update PlantEntryForm to support editing existing plants
+- [x] Add edit buttons to each plant entry
+- [x] Implement edit state management (editingPlant, cancelEdit)
+- [x] Update form submission to handle both create and update operations
+- [x] Fix plant deletion API endpoint (use correct route)
+
+### ✅ Garden Location Management
+- [x] Create GardenLocationsManager component
+- [x] Implement full CRUD operations for garden locations
+- [x] Add rich form with microclimate notes, soil type, irrigation, light conditions
+- [x] Display location cards with icons and detailed information
+- [x] Support editing and deleting garden locations
+
+### ✅ Plant Form Integration with Locations
+- [x] Update PlantEntryForm to fetch and use garden locations
+- [x] Add location dropdown with garden locations
+- [x] Support custom location input as fallback
+- [x] Show location descriptions in dropdown
+
+### ✅ AI Insights Integration
+- [x] Update AI analysis route to fetch garden location data
+- [x] Generate location-specific recommendations
+- [x] Include microclimate and irrigation insights
+- [x] Update growth trends and permaculture opportunities with location data
+- [x] Add garden_locations count to metadata
+
+### ✅ UI Integration & Testing
+- [x] Add GardenLocationsManager to main dashboard/navigation
+- [x] Build successful with no TypeScript errors
+- [ ] Test plant editing functionality end-to-end
+- [ ] Test garden location CRUD operations
+- [ ] Verify AI insights include location-specific recommendations
+- [ ] Test location dropdown in plant form
+
+### 📋 Future Enhancements
+- [ ] Add plant location history tracking
+- [ ] Implement location-based plant recommendations
+- [ ] Add location photos/images
+- [ ] Create location-specific activity logs
+- [ ] Add location weather monitoring
+- [ ] Implement location-based harvest tracking
+
+## Technical Notes
+
+### Database Changes
+- Added `garden_locations` table with user-specific locations
+- Enhanced AI analysis to use location notes for personalized insights
+- Maintained backward compatibility with existing plant location strings
+
+### Component Architecture
+- `PlantEntryForm`: Enhanced with editing and location integration
+- `GardenLocationsManager`: New comprehensive location management
+- AI insights now consider location-specific data for recommendations
+
+### Key Features Implemented
+1. **Plant Editing**: Full edit capability with form pre-population
+2. **Garden Locations**: Rich location management with microclimate tracking
+3. **Location Integration**: Plants can use predefined locations or custom text
+4. **AI Enhancement**: Location notes inform AI recommendations
+5. **User Experience**: Intuitive editing with visual feedback
+
+## Status: ✅ Complete
+All core functionality implemented and integrated. Ready for testing and deployment.
+
+### Summary of Implementation
+- **Plant Editing**: Users can now edit existing plants with full form pre-population
+- **Garden Locations**: Comprehensive location management with microclimate tracking
+- **AI Integration**: Location notes and data inform personalized AI recommendations
+- **UI Integration**: New "Garden Locations" tab added to main navigation
+- **Database**: New garden_locations table with user-specific data
 - **Build Status**: All TypeScript errors resolved, clean production builds

@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
-import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, DailyWeatherTrend, User } from '@/types';
+import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, GardenLocation, DailyWeatherTrend, User } from '@/types';
 import bcrypt from 'bcryptjs';
 
 // Database connection configuration
@@ -115,18 +115,24 @@ export const createTablesSQL = `
     INDEX idx_expires_at (expires_at)
   );
 
-  -- Locations table
-  CREATE TABLE IF NOT EXISTS locations (
+  -- Garden locations table
+  CREATE TABLE IF NOT EXISTS garden_locations (
     id VARCHAR(36) PRIMARY KEY,
-    name VARCHAR(200) NOT NULL UNIQUE,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(200) NOT NULL,
     description TEXT,
+    notes TEXT,
     size VARCHAR(100),
     soil_type VARCHAR(100),
     light_conditions ENUM('full_sun', 'partial_sun', 'partial_shade', 'full_shade'),
     irrigation_type ENUM('manual', 'drip', 'sprinkler', 'none') DEFAULT 'manual',
+    microclimate_notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME,
-    INDEX idx_name (name)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_name (name),
+    UNIQUE KEY unique_user_location (user_id, name)
   );
 `;
 
@@ -458,4 +464,49 @@ export async function getWeatherTrends(days: 7 | 30 | 90 = 30): Promise<DailyWea
     console.error(`Error fetching weather trends for last ${days} days:`, error);
     throw error;
   }
+}
+
+// Garden Location operations
+export async function createGardenLocation(location: Omit<GardenLocation, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  const pool = getDbPool();
+  const id = uuidv4();
+  await pool.execute(
+    `INSERT INTO garden_locations (id, user_id, name, description, notes, size, soil_type, light_conditions, irrigation_type, microclimate_notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, location.user_id, location.name, location.description || null, location.notes || null, location.size || null, location.soil_type || null, location.light_conditions || null, location.irrigation_type || 'manual', location.microclimate_notes || null]
+  );
+  return id;
+}
+
+export async function getGardenLocations(userId: string): Promise<GardenLocation[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute('SELECT * FROM garden_locations WHERE user_id = ? ORDER BY name ASC', [userId]);
+  return rows as GardenLocation[];
+}
+
+export async function getGardenLocationById(id: string, userId: string): Promise<GardenLocation | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute('SELECT * FROM garden_locations WHERE id = ? AND user_id = ?', [id, userId]);
+  const locations = rows as GardenLocation[];
+  return locations.length > 0 ? locations[0] : null;
+}
+
+export async function updateGardenLocation(id: string, userId: string, updates: Partial<Omit<GardenLocation, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  const pool = getDbPool();
+  const fields = Object.keys(updates) as (keyof typeof updates)[];
+  const values = fields.map(field => updates[field]);
+  values.push(id);
+  values.push(userId);
+
+  const setClause = fields.map(field => `${field} = ?`).join(', ');
+  
+  await pool.execute(
+    `UPDATE garden_locations SET ${setClause}, updated_at = NOW() WHERE id = ? AND user_id = ?`,
+    values
+  );
+}
+
+export async function deleteGardenLocation(id: string, userId: string): Promise<void> {
+  const pool = getDbPool();
+  await pool.execute('DELETE FROM garden_locations WHERE id = ? AND user_id = ?', [id, userId]);
 }

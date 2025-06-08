@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart } from 'lucide-react';
+import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart, MapPin } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import WeatherWidget from './WeatherWidget';
@@ -11,10 +11,12 @@ import RecentEntries from './RecentEntries';
 import AIInsights from './AIInsights';
 import WeatherTrendsChart from './WeatherTrendsChart';
 import ThreeDayForecast from '@/components/ThreeDayForecast';
+import GardenLocationsManager from './GardenLocationsManager';
 
 const navItems = [
   { name: 'Overview', icon: AreaChart },
   { name: 'Plants & Land', icon: Leaf },
+  { name: 'Garden Locations', icon: MapPin },
   { name: 'Weather', icon: Cloud },
   { name: 'Analytics', icon: BarChart2 },
   { name: 'Insights', icon: Brain },
@@ -52,6 +54,8 @@ export default function Dashboard() {
         );
       case 'Plants & Land':
         return <PlantEntryForm />;
+      case 'Garden Locations':
+        return <GardenLocationsManager />;
       case 'Weather':
         return (
           <div className="space-y-6">

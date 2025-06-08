@@ -54,6 +54,22 @@ export interface AIRecommendation {
   is_active: boolean;
 }
 
+export interface GardenLocation {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  notes?: string;
+  size?: string;
+  soil_type?: string;
+  light_conditions?: 'full_sun' | 'partial_sun' | 'partial_shade' | 'full_shade';
+  irrigation_type?: 'manual' | 'drip' | 'sprinkler' | 'none';
+  microclimate_notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Legacy Location interface for backward compatibility
 export interface Location {
   id: string;
   name: string;
@@ -286,6 +302,17 @@ export interface ActivityFormData {
   description: string;
   location?: string;
   notes?: string;
+}
+
+export interface GardenLocationFormData {
+  name: string;
+  description?: string;
+  notes?: string;
+  size?: string;
+  soil_type?: string;
+  light_conditions?: 'full_sun' | 'partial_sun' | 'partial_shade' | 'full_shade';
+  irrigation_type?: 'manual' | 'drip' | 'sprinkler' | 'none';
+  microclimate_notes?: string;
 }
 
 // Dashboard analytics types

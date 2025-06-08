@@ -86,17 +86,23 @@ const createTablesSQLArray = [
     INDEX idx_expires_at (expires_at)
   )`,
 
-  `CREATE TABLE IF NOT EXISTS locations (
+  `CREATE TABLE IF NOT EXISTS garden_locations (
     id VARCHAR(36) PRIMARY KEY,
-    name VARCHAR(200) NOT NULL UNIQUE,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(200) NOT NULL,
     description TEXT,
+    notes TEXT,
     size VARCHAR(100),
     soil_type VARCHAR(100),
     light_conditions ENUM('full_sun', 'partial_sun', 'partial_shade', 'full_shade'),
     irrigation_type ENUM('manual', 'drip', 'sprinkler', 'none') DEFAULT 'manual',
+    microclimate_notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME,
-    INDEX idx_name (name)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_name (name),
+    UNIQUE KEY unique_user_location (user_id, name)
   )`
 ];
 

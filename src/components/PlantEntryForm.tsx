@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plant } from '@/types';
+import { Plant, GardenLocation } from '@/types';
 import { 
   Plus,
   X,
-  Save
+  Save,
+  Edit
 } from 'lucide-react';
 
 interface PlantEntry {
@@ -27,6 +28,8 @@ export default function PlantEntryForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingPlant, setEditingPlant] = useState<PlantEntry | null>(null);
+  const [gardenLocations, setGardenLocations] = useState<GardenLocation[]>([]);
 
   const [formData, setFormData] = useState<Omit<PlantEntry, 'id' | 'created_at' | 'updated_at'>>({
     plant_type: '',
@@ -38,9 +41,10 @@ export default function PlantEntryForm() {
     stage: 'seed'
   });
 
-  // Load plants from API when component mounts
+  // Load plants and garden locations from API when component mounts
   useEffect(() => {
     fetchPlants();
+    fetchGardenLocations();
   }, []);
 
   const fetchPlants = async () => {
@@ -95,6 +99,21 @@ export default function PlantEntryForm() {
     }
   };
 
+  const fetchGardenLocations = async () => {
+    try {
+      const response = await fetch('/api/garden-locations');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setGardenLocations(data.locations);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching garden locations:', err);
+      // Don't show error for garden locations, just use text input
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -102,8 +121,11 @@ export default function PlantEntryForm() {
       setSaving(true);
       setError(null);
 
-      const response = await fetch('/api/plants', {
-        method: 'POST',
+      const url = editingPlant ? `/api/plants/${editingPlant.id}` : '/api/plants';
+      const method = editingPlant ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -112,7 +134,7 @@ export default function PlantEntryForm() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save plant');
+        throw new Error(errorData.error || `Failed to ${editingPlant ? 'update' : 'save'} plant`);
       }
 
       const result = await response.json();
@@ -128,6 +150,7 @@ export default function PlantEntryForm() {
           stage: 'seed'
         });
         setIsFormOpen(false);
+        setEditingPlant(null);
         
         // Refresh the plants list
         await fetchPlants();
@@ -146,7 +169,7 @@ export default function PlantEntryForm() {
     }
 
     try {
-      const response = await fetch(`/api/plants?id=${id}`, {
+      const response = await fetch(`/api/plants/${id}`, {
         method: 'DELETE',
       });
 
@@ -160,6 +183,34 @@ export default function PlantEntryForm() {
       console.error('Error deleting plant:', err);
       setError('Failed to delete plant');
     }
+  };
+
+  const editPlant = (plant: PlantEntry) => {
+    setEditingPlant(plant);
+    setFormData({
+      plant_type: plant.plant_type,
+      variety: plant.variety,
+      planting_date: plant.planting_date,
+      location: plant.location,
+      notes: plant.notes,
+      health_status: plant.health_status,
+      stage: plant.stage
+    });
+    setIsFormOpen(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingPlant(null);
+    setFormData({
+      plant_type: '',
+      variety: '',
+      planting_date: '',
+      location: '',
+      notes: '',
+      health_status: 'good',
+      stage: 'seed'
+    });
+    setIsFormOpen(false);
   };
 
   const getHealthColor = (status: string) => {
@@ -241,9 +292,11 @@ export default function PlantEntryForm() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-xl p-6 w-full max-w-2xl border border-gray-800">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold">Add New Plant Entry</h3>
+              <h3 className="text-xl font-semibold">
+                {editingPlant ? 'Edit Plant Entry' : 'Add New Plant Entry'}
+              </h3>
               <button
-                onClick={() => setIsFormOpen(false)}
+                onClick={cancelEdit}
                 className="text-gray-400 hover:text-white"
                 disabled={saving}
               >
@@ -300,15 +353,47 @@ export default function PlantEntryForm() {
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Location *
                   </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="e.g., Garden Bed A, Greenhouse"
-                    required
-                    disabled={saving}
-                  />
+                  {gardenLocations.length > 0 ? (
+                    <div className="space-y-2">
+                      <select
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        required
+                        disabled={saving}
+                      >
+                        <option value="">Select a garden location...</option>
+                        {gardenLocations.map((location) => (
+                          <option key={location.id} value={location.name}>
+                            {location.name} {location.description && `- ${location.description}`}
+                          </option>
+                        ))}
+                        <option value="__custom__">Custom location...</option>
+                      </select>
+                      {formData.location === '__custom__' && (
+                        <input
+                          type="text"
+                          value=""
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          placeholder="Enter custom location..."
+                          required
+                          disabled={saving}
+                          autoFocus
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="e.g., Garden Bed A, Greenhouse"
+                      required
+                      disabled={saving}
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -377,7 +462,7 @@ export default function PlantEntryForm() {
                   disabled={saving}
                 >
                   <Save className="w-4 h-4" />
-                  <span>{saving ? 'Saving...' : 'Save Entry'}</span>
+                  <span>{saving ? (editingPlant ? 'Updating...' : 'Saving...') : (editingPlant ? 'Update Entry' : 'Save Entry')}</span>
                 </button>
               </div>
             </form>
@@ -414,6 +499,13 @@ export default function PlantEntryForm() {
                   <div className={`px-2 py-1 rounded text-xs font-medium border ${getHealthColor(entry.health_status)}`}>
                     {entry.health_status}
                   </div>
+                  <button
+                    onClick={() => editPlant(entry)}
+                    className="text-blue-400 hover:text-blue-300 transition-colors p-1"
+                    title="Edit plant"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => deletePlant(entry.id!)}
                     className="text-red-400 hover:text-red-300 transition-colors p-1"

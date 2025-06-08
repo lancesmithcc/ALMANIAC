@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth";
-import { getPlants } from '@/lib/database';
+import { getPlants, getGardenLocations } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +22,12 @@ export async function POST(request: NextRequest) {
       body = {};
     }
 
-    // Fetch user's plants safely
+    // Fetch user's plants and garden locations safely
     let plants: any[] = [];
     let plantsCount = 0;
+    let gardenLocations: any[] = [];
+    let locationsCount = 0;
+    
     try {
       plants = await getPlants(session.user.id);
       plantsCount = plants.length;
@@ -33,6 +36,16 @@ export async function POST(request: NextRequest) {
       console.error('Failed to fetch plants:', error);
       plants = [];
       plantsCount = 0;
+    }
+
+    try {
+      gardenLocations = await getGardenLocations(session.user.id);
+      locationsCount = gardenLocations.length;
+      console.log('Successfully fetched garden locations:', locationsCount);
+    } catch (error) {
+      console.error('Failed to fetch garden locations:', error);
+      gardenLocations = [];
+      locationsCount = 0;
     }
 
     // Generate plant-specific recommendations if we have plants
@@ -79,10 +92,68 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate basic fallback with plant data
+    // Generate location-specific recommendations
+    const locationRecommendations = [];
+    if (gardenLocations.length > 0) {
+      // Group plants by location
+      const plantsByLocation = plants.reduce((acc, plant) => {
+        const locationName = plant.location;
+        if (!acc[locationName]) acc[locationName] = [];
+        acc[locationName].push(plant);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Find locations with detailed information
+      const detailedLocations = gardenLocations.filter(loc => 
+        loc.notes || loc.microclimate_notes || loc.soil_type
+      );
+
+      if (detailedLocations.length > 0) {
+        locationRecommendations.push({
+          type: 'location_optimization',
+          priority: 'high' as const,
+          description: `Optimize your ${detailedLocations.length} detailed garden locations based on their unique characteristics.`,
+          reasoning: 'Location-specific growing conditions require tailored approaches for maximum success.',
+          confidence: 90,
+          timing: 'Review and adjust seasonally',
+          permaculture_principle: 'Observe and interact'
+        });
+      }
+
+      // Check for locations with specific microclimates
+      const microclimateLocs = gardenLocations.filter(loc => loc.microclimate_notes);
+      if (microclimateLocs.length > 0) {
+        locationRecommendations.push({
+          type: 'microclimate_management',
+          priority: 'medium' as const,
+          description: `Leverage microclimate data from ${microclimateLocs.length} locations to optimize plant placement.`,
+          reasoning: 'Understanding microclimates allows for strategic plant placement and improved yields.',
+          confidence: 85,
+          timing: 'Consider when planning new plantings',
+          permaculture_principle: 'Use edges and value the marginal'
+        });
+      }
+
+      // Irrigation recommendations based on location types
+      const irrigationTypes = [...new Set(gardenLocations.map(loc => loc.irrigation_type))];
+      if (irrigationTypes.length > 1) {
+        locationRecommendations.push({
+          type: 'water_management',
+          priority: 'medium' as const,
+          description: `Coordinate watering across your ${irrigationTypes.length} different irrigation systems.`,
+          reasoning: 'Different irrigation methods require different scheduling and monitoring approaches.',
+          confidence: 80,
+          timing: 'Daily monitoring, seasonal adjustments',
+          permaculture_principle: 'Catch and store energy'
+        });
+      }
+    }
+
+    // Generate basic fallback with plant and location data
     const basicFallback = {
       recommendations: [
         ...plantRecommendations,
+        ...locationRecommendations,
         {
           type: 'permaculture_design',
           priority: 'high' as const,
@@ -117,12 +188,12 @@ export async function POST(request: NextRequest) {
       ],
       insights: {
         growth_trends: plants.length > 0 ? [
-          `You have ${plants.length} plants in various stages of growth`,
+          `You have ${plants.length} plants across ${locationsCount > 0 ? locationsCount : 'multiple'} garden locations`,
           'Focus on creating beneficial relationships between your plants',
-          'Monitor plant spacing to prevent overcrowding'
+          locationsCount > 0 ? 'Use location-specific notes to optimize plant placement' : 'Monitor plant spacing to prevent overcrowding'
         ] : [
           'Focus on building healthy soil biology for long-term success',
-          'Start with easy-to-grow plants to build confidence',
+          locationsCount > 0 ? 'Use your garden location data to plan optimal plant placement' : 'Start with easy-to-grow plants to build confidence',
           'Observe your garden daily to learn its patterns'
         ],
         weather_impacts: [
@@ -139,7 +210,12 @@ export async function POST(request: NextRequest) {
           'Regular observation prevents most problems',
           'Healthy soil prevents most plant diseases'
         ],
-        permaculture_opportunities: [
+        permaculture_opportunities: gardenLocations.length > 0 ? [
+          `Optimize your ${gardenLocations.length} garden locations for maximum productivity`,
+          'Use microclimate data to create specialized growing zones',
+          'Implement location-specific water management strategies',
+          'Design food forests with multiple layers'
+        ] : [
           'Design food forests with multiple layers',
           'Implement water harvesting systems',
           'Create habitat for beneficial wildlife'
@@ -190,6 +266,7 @@ export async function POST(request: NextRequest) {
       analysis: basicFallback,
       metadata: {
         plants_analyzed: plantsCount,
+        garden_locations: locationsCount,
         weather_records: 0,
         activities_reviewed: 0,
         moon_phase_included: false,

@@ -198,7 +198,7 @@ const AIInsights: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-emerald-400 flex items-center">
           <Brain className="w-5 h-5 mr-2" />
-          AI-Powered Insights
+          Insights
         </h3>
         <button
           onClick={fetchInsights}
