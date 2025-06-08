@@ -323,18 +323,40 @@ export async function POST(request: NextRequest) {
     // Fetch weather data
     if (includeWeather) {
       try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/weather?location=auto:ip&forecast=true`;
-        const weatherResponse = await fetch(apiUrl);
-        if (weatherResponse.ok) {
-          const weatherData: WeatherData = await weatherResponse.json();
-          weatherForAI = [{ current: { temperature: weatherData.temperature, humidity: weatherData.humidity, windSpeed: weatherData.windSpeed, condition: weatherData.condition, description: weatherData.description, uv: weatherData.uv, feelsLike: weatherData.feelsLike }, astro: weatherData.astro }];
+        // Use external weather API directly instead of internal API call
+        const weatherApiKey = process.env.WEATHER_API_KEY;
+        if (weatherApiKey) {
+          const weatherResponse = await fetch(`http://api.weatherapi.com/v1/forecast.json?key=${weatherApiKey}&q=auto:ip&days=1&aqi=yes`);
+          if (weatherResponse.ok) {
+            const weatherData = await weatherResponse.json();
+            weatherForAI = [{
+              current: {
+                temperature: weatherData.current.temp_c,
+                humidity: weatherData.current.humidity,
+                windSpeed: weatherData.current.wind_kph,
+                condition: weatherData.current.condition.text,
+                description: weatherData.current.condition.text,
+                uv: weatherData.current.uv,
+                feelsLike: weatherData.current.feelslike_c
+              },
+              astro: {
+                sunrise: weatherData.forecast?.forecastday?.[0]?.astro?.sunrise || 'N/A',
+                sunset: weatherData.forecast?.forecastday?.[0]?.astro?.sunset || 'N/A',
+                moonrise: weatherData.forecast?.forecastday?.[0]?.astro?.moonrise || 'N/A',
+                moonset: weatherData.forecast?.forecastday?.[0]?.astro?.moonset || 'N/A',
+                moon_phase: weatherData.forecast?.forecastday?.[0]?.astro?.moon_phase || 'N/A',
+                moon_illumination: weatherData.forecast?.forecastday?.[0]?.astro?.moon_illumination || 'N/A'
+              }
+            }];
+          }
         }
-      } catch { 
-        // Weather fetch failed, continue without weather data
+      } catch (weatherError) { 
+        console.log('Weather fetch failed, continuing without weather data:', weatherError);
+        // Continue without weather data
       }
     }
 
-    // Fetch moon phase data
+    // Fetch moon phase data - calculate directly instead of API call
     let moonPhaseData: {
       phase: string;
       illumination: number;
@@ -345,15 +367,80 @@ export async function POST(request: NextRequest) {
       planting_guidance: string;
       energy_description: string;
     } | null = null;
+    
     try {
-      const moonApiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/moon-phase`;
-      const moonResponse = await fetch(moonApiUrl);
-      if (moonResponse.ok) {
-        const moonData = await moonResponse.json();
-        moonPhaseData = moonData.moon;
+      // Calculate moon phase directly
+      const now = new Date();
+      const moonAge = ((now.getTime() - new Date('2000-01-06').getTime()) / (1000 * 60 * 60 * 24)) % 29.53;
+      
+      let phase = 'New Moon';
+      let illumination = 0;
+      
+      if (moonAge < 1.84566) {
+        phase = 'New Moon';
+        illumination = 0;
+      } else if (moonAge < 5.53699) {
+        phase = 'Waxing Crescent';
+        illumination = Math.round((moonAge / 14.76) * 100);
+      } else if (moonAge < 9.22831) {
+        phase = 'First Quarter';
+        illumination = 50;
+      } else if (moonAge < 12.91963) {
+        phase = 'Waxing Gibbous';
+        illumination = Math.round(50 + ((moonAge - 9.22831) / 14.76) * 50);
+      } else if (moonAge < 16.61096) {
+        phase = 'Full Moon';
+        illumination = 100;
+      } else if (moonAge < 20.30228) {
+        phase = 'Waning Gibbous';
+        illumination = Math.round(100 - ((moonAge - 16.61096) / 14.76) * 50);
+      } else if (moonAge < 23.99361) {
+        phase = 'Last Quarter';
+        illumination = 50;
+      } else {
+        phase = 'Waning Crescent';
+        illumination = Math.round(50 - ((moonAge - 23.99361) / 14.76) * 50);
       }
-    } catch {
-      // Moon phase fetch failed, continue without moon data
+      
+      // Simple zodiac calculation (approximate)
+      const zodiacSigns = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+      const elements = ['Fire', 'Earth', 'Air', 'Water', 'Fire', 'Earth', 'Air', 'Water', 'Fire', 'Earth', 'Air', 'Water'];
+      const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+      const zodiacIndex = Math.floor((dayOfYear + moonAge) / 30.44) % 12;
+      
+      const zodiacSign = zodiacSigns[zodiacIndex];
+      const element = elements[zodiacIndex];
+      
+      const activityMap: { [key: string]: string[] } = {
+        'New Moon': ['Planning', 'Setting intentions', 'Seed starting'],
+        'Waxing Crescent': ['Planting', 'Transplanting', 'Growth activities'],
+        'First Quarter': ['Cultivation', 'Pruning', 'Pest management'],
+        'Waxing Gibbous': ['Feeding plants', 'Harvesting', 'Building structures'],
+        'Full Moon': ['Harvesting', 'Preserving', 'Maximum potency activities'],
+        'Waning Gibbous': ['Harvesting root crops', 'Composting', 'Soil preparation'],
+        'Last Quarter': ['Pruning', 'Weeding', 'Removing diseased plants'],
+        'Waning Crescent': ['Soil work', 'Composting', 'Rest and planning']
+      };
+      
+      moonPhaseData = {
+        phase,
+        illumination,
+        age: moonAge,
+        zodiac_sign: zodiacSign,
+        moon_sign_element: element,
+        optimal_activities: activityMap[phase] || ['General garden maintenance'],
+        planting_guidance: phase.includes('Waxing') ? 'Good time for planting and growth activities' : 
+                          phase.includes('Waning') ? 'Good time for pruning and soil work' :
+                          phase === 'Full Moon' ? 'Perfect for harvesting and preservation' :
+                          'Ideal for planning and new beginnings',
+        energy_description: phase.includes('Waxing') ? 'Growing and building energy' :
+                           phase.includes('Waning') ? 'Releasing and clearing energy' :
+                           phase === 'Full Moon' ? 'Peak energy and manifestation' :
+                           'New beginnings and fresh starts'
+      };
+    } catch (moonError) {
+      console.log('Moon phase calculation failed, continuing without moon data:', moonError);
+      // Continue without moon data
     }
 
     const activities = includeActivities ? await getRecentActivities(userId, 20) : [];
