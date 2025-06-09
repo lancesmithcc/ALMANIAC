@@ -166,7 +166,7 @@ export const createTablesSQL = `
     can_delete_plants BOOLEAN DEFAULT FALSE,
     can_invite_users BOOLEAN DEFAULT FALSE,
     can_manage_members BOOLEAN DEFAULT FALSE,
-    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    joined_at DATETIME,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME,
     FOREIGN KEY (garden_id) REFERENCES gardens(id) ON DELETE CASCADE,
