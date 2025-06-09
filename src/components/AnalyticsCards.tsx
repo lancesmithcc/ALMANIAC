@@ -3,11 +3,24 @@
 import { useState, useEffect } from 'react';
 import { Sprout, Target, TrendingUp, AlertTriangle } from 'lucide-react';
 import { DashboardStats } from '@/types';
+import AlertsDetail from './AlertsDetail';
+
+interface AnalyticsCardData {
+  title: string;
+  value: string;
+  change: string;
+  changeType: 'positive' | 'warning' | 'neutral';
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  clickable: boolean;
+  onClick?: () => void;
+}
 
 export default function AnalyticsCards() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAlertsDetail, setShowAlertsDetail] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
@@ -116,14 +129,15 @@ export default function AnalyticsCards() {
     );
   }
 
-  const analyticsData = [
+  const analyticsData: AnalyticsCardData[] = [
     {
       title: 'Total Plants',
       value: stats.total_plants.toString(),
       change: `${stats.active_plants} active`,
       changeType: stats.active_plants > 0 ? 'positive' as const : 'neutral' as const,
       icon: Sprout,
-      color: 'emerald'
+      color: 'emerald',
+      clickable: false
     },
     {
       title: 'Health Score',
@@ -131,7 +145,8 @@ export default function AnalyticsCards() {
       change: `${stats.plants_needing_attention} need attention`,
       changeType: stats.plants_needing_attention === 0 ? 'positive' as const : 'warning' as const,
       icon: Target,
-      color: 'blue'
+      color: 'blue',
+      clickable: false
     },
     {
       title: 'Recent Activity',
@@ -139,7 +154,8 @@ export default function AnalyticsCards() {
       change: 'past 7 days',
       changeType: 'neutral' as const,
       icon: TrendingUp,
-      color: 'purple'
+      color: 'purple',
+      clickable: false
     },
     {
       title: 'Alerts',
@@ -147,7 +163,9 @@ export default function AnalyticsCards() {
       change: stats.weather_alerts > 0 ? 'weather alerts' : 'no issues',
       changeType: (stats.plants_needing_attention + stats.weather_alerts) === 0 ? 'positive' as const : 'warning' as const,
       icon: AlertTriangle,
-      color: 'orange'
+      color: 'orange',
+      clickable: true,
+      onClick: () => setShowAlertsDetail(true)
     }
   ];
 
@@ -160,7 +178,10 @@ export default function AnalyticsCards() {
         return (
           <div
             key={index}
-            className={`${colors.bg} ${colors.border} border rounded-xl p-4 backdrop-blur-sm`}
+            className={`${colors.bg} ${colors.border} border rounded-xl p-4 backdrop-blur-sm ${
+              stat.clickable ? 'cursor-pointer hover:bg-opacity-80 transition-all duration-200 hover:scale-[1.02]' : ''
+            }`}
+            onClick={stat.clickable ? stat.onClick : undefined}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -183,12 +204,23 @@ export default function AnalyticsCards() {
                 }`}>
                   {stat.change}
                 </div>
-                <p className="text-xs text-gray-500">status</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+                <p className="text-xs text-gray-500">
+                  {stat.clickable ? 'click for details' : 'status'}
+                </p>
+                      </div>
+      </div>
+
+      {/* Alerts Detail Modal */}
+      {stats && (
+        <AlertsDetail
+          isOpen={showAlertsDetail}
+          onClose={() => setShowAlertsDetail(false)}
+          stats={stats}
+        />
+      )}
+    </div>
+  );
+})}
       
       {/* Summary Card */}
       <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-4 border border-gray-800/50 mt-6">
