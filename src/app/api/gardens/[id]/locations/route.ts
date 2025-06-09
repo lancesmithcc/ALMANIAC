@@ -11,7 +11,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   let session;
   let gardenId;
-  let data;
+  let data: GardenLocationFormData | undefined;
   
   try {
     session = await getServerSession(authOptions);
@@ -34,6 +34,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     data = await request.json();
+    
+    if (!data) {
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+    }
     
     const locationId = await createGardenLocation({
       garden_id: gardenId,
