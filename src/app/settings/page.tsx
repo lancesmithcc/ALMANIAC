@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { ArrowLeft, User, Lock, Save, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { data: session, update } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   
   // Username form state
@@ -28,11 +28,26 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Show loading while session is loading
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Redirect if not authenticated
   if (!session) {
     router.push('/login');
     return null;
   }
+
+  // Debug: Log session data to help troubleshoot
+  console.log('Settings page session:', session);
 
   const handleUsernameSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -46,7 +61,8 @@ export default function SettingsPage() {
       return;
     }
 
-    if (newUsername === session.user?.username) {
+    const currentUsername = session.user?.username || session.user?.name;
+    if (newUsername === currentUsername) {
       setUsernameError('New username must be different from current username.');
       setIsUpdatingUsername(false);
       return;
@@ -156,7 +172,7 @@ export default function SettingsPage() {
                 width={32}
                 height={32}
               />
-              <span className="text-gray-300">Hi, {session.user?.username}</span>
+              <span className="text-gray-300">Hi, {session.user?.username || session.user?.name}</span>
             </div>
           </div>
         </div>
@@ -174,7 +190,7 @@ export default function SettingsPage() {
             </div>
             
             <div className="mb-4">
-              <p className="text-sm text-gray-400">Current username: <span className="text-white font-medium">{session.user?.username}</span></p>
+              <p className="text-sm text-gray-400">Current username: <span className="text-white font-medium">{session.user?.username || session.user?.name}</span></p>
             </div>
 
             <form onSubmit={handleUsernameSubmit} className="space-y-4">

@@ -67,12 +67,18 @@ export const authOptions: AuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       // Persist the user id and username to the token right after signin
       if (user) {
         token.id = user.id;
         token.username = user.username; // Use user.username (string) here
       }
+      
+      // Handle session updates (like username changes)
+      if (trigger === "update" && session?.username) {
+        token.username = session.username;
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -80,6 +86,7 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.name = token.username as string; // Map username back
+        session.user.username = token.username as string; // Also set username property
       }
       return session;
     }
