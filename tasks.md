@@ -464,3 +464,24 @@ All core functionality implemented and integrated. AI insights now fully enhance
 - **UI Integration**: New "Garden Locations" tab added to main navigation
 - **Database**: New garden_locations table with user-specific data and proper foreign key relationships
 - **Build Status**: All TypeScript errors resolved, clean production builds
+
+## Deployment & Database Issues (Current)
+🔧 **Netlify Build Fix:** Fixed ESLint errors by removing unused imports (Trash2, Check, X) from GardenSettings.tsx
+🔧 **Database Schema Updates:** Updated init-db route to use complete table definitions including new garden system tables
+🔧 **Plants Table Fix:** Added missing location_id column to plants table definition with proper foreign key constraint
+⚠️ **PENDING:** Production database needs initialization of new tables (gardens, garden_memberships, garden_invitations)
+
+### Required Action After Deployment
+**IMPORTANT:** Once the new deployment completes, visit:
+`https://almaniac.lancesmith.cc/api/init-db` (POST request)
+
+This will create the missing database tables:
+- gardens
+- garden_memberships  
+- garden_invitations
+- Add location_id column to plants table
+
+Without this initialization, the following features will fail with 500 errors:
+- Garden locations functionality
+- Plant management
+- Multi-user garden system
