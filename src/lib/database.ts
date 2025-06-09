@@ -46,6 +46,7 @@ export const createTablesSQL = `
     variety VARCHAR(100),
     planting_date DATE NOT NULL,
     location VARCHAR(200) NOT NULL,
+    location_id VARCHAR(36),
     notes TEXT,
     health_status ENUM('excellent', 'good', 'fair', 'poor') DEFAULT 'good',
     stage ENUM('seed', 'seedling', 'vegetative', 'flowering', 'fruiting', 'harvest') DEFAULT 'seed',
@@ -55,7 +56,8 @@ export const createTablesSQL = `
     INDEX idx_location (location),
     INDEX idx_health_status (health_status),
     INDEX idx_stage (stage),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (location_id) REFERENCES garden_locations(id) ON DELETE SET NULL
   );
 
   -- Weather records table
