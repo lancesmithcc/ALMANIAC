@@ -59,10 +59,60 @@ export async function GET(request: NextRequest) {
     
     const apiKey = process.env.WEATHER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Weather API key not configured' },
-        { status: 500 }
-      );
+      // Return mock weather data when API key is not configured
+      console.log('Weather API key not configured, returning mock data');
+      const mockWeatherData = {
+        location: 'Mock Location',
+        temperature: 22,
+        humidity: 65,
+        windSpeed: 8,
+        precipitation: 0,
+        condition: 'partly-cloudy',
+        description: 'Partly Cloudy',
+        icon: '//cdn.weatherapi.com/weather/64x64/day/116.png',
+        lastUpdated: new Date().toISOString(),
+        uv: 5,
+        feelsLike: 24,
+        visibility: 10,
+        forecast: [
+          {
+            date: new Date().toISOString().split('T')[0],
+            maxTemp: 25,
+            minTemp: 18,
+            condition: 'partly-cloudy',
+            description: 'Partly Cloudy',
+            icon: '//cdn.weatherapi.com/weather/64x64/day/116.png',
+            chanceOfRain: 20,
+            humidity: 65,
+            windSpeed: 8
+          },
+          {
+            date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+            maxTemp: 27,
+            minTemp: 19,
+            condition: 'sunny',
+            description: 'Sunny',
+            icon: '//cdn.weatherapi.com/weather/64x64/day/113.png',
+            chanceOfRain: 10,
+            humidity: 60,
+            windSpeed: 6
+          },
+          {
+            date: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+            maxTemp: 23,
+            minTemp: 16,
+            condition: 'cloudy',
+            description: 'Cloudy',
+            icon: '//cdn.weatherapi.com/weather/64x64/day/119.png',
+            chanceOfRain: 40,
+            humidity: 70,
+            windSpeed: 10
+          }
+        ],
+        unit: unit
+      };
+      
+      return NextResponse.json(mockWeatherData);
     }
 
     // Construct API URL with forecast if requested

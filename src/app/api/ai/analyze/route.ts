@@ -56,10 +56,11 @@ export async function POST(request: NextRequest) {
       const weatherResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/weather`);
       if (weatherResponse.ok) {
         const weatherResult = await weatherResponse.json();
-        if (weatherResult.success) {
-          weatherData = weatherResult.weather;
+        // Weather API returns data directly, not wrapped in success/weather
+        if (weatherResult && weatherResult.temperature !== undefined) {
+          weatherData = weatherResult;
           weatherRecords = 1;
-          console.log('Successfully fetched weather data');
+          console.log('Successfully fetched weather data:', weatherResult);
         }
       }
     } catch (error) {
@@ -71,9 +72,9 @@ export async function POST(request: NextRequest) {
       const moonResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/moon-phase`);
       if (moonResponse.ok) {
         const moonResult = await moonResponse.json();
-        if (moonResult.success) {
-          moonData = moonResult;
-          console.log('Successfully fetched moon phase data');
+        if (moonResult.success && moonResult.moon) {
+          moonData = moonResult.moon;
+          console.log('Successfully fetched moon phase data:', moonResult.moon);
         }
       }
     } catch (error) {
@@ -603,13 +604,13 @@ export async function POST(request: NextRequest) {
       },
       alerts: [],
       moon_guidance: moonData ? [
-        `Current moon phase: ${moonData.moon_phase?.phase_name || 'Unknown'} (${Math.round(moonData.moon_phase?.illumination || 0)}% illuminated)`,
-        moonData.moon_phase?.phase_name?.toLowerCase().includes('new') ? 'Perfect time for planting seeds and starting new garden projects' :
-        moonData.moon_phase?.phase_name?.toLowerCase().includes('full') ? 'Ideal time for harvesting and preserving your crops' :
-        (moonData.moon_phase?.illumination || 0) > 50 ? 'Waxing moon - focus on above-ground growth and transplanting' :
+        `Current moon phase: ${moonData.phase || 'Unknown'} (${Math.round(moonData.illumination || 0)}% illuminated)`,
+        moonData.phase?.toLowerCase().includes('new') ? 'Perfect time for planting seeds and starting new garden projects' :
+        moonData.phase?.toLowerCase().includes('full') ? 'Ideal time for harvesting and preserving your crops' :
+        (moonData.illumination || 0) > 50 ? 'Waxing moon - focus on above-ground growth and transplanting' :
         'Waning moon - excellent for root crops, pruning, and soil preparation',
-        'Follow lunar rhythms for enhanced plant vitality',
-        'Track moon phases to optimize your gardening activities'
+        moonData.planting_guidance || 'Follow lunar rhythms for enhanced plant vitality',
+        moonData.energy_description || 'Track moon phases to optimize your gardening activities'
       ] : [
         'Follow lunar calendar for optimal timing',
         'New moon: Planning and seed starting',
