@@ -60,7 +60,7 @@ export default function Dashboard() {
           </div>
         );
       case 'Plants & Land':
-        return <PlantEntryForm onFormSubmit={() => {}} />;
+        return <PlantEntryForm />;
       case 'Garden Locations':
         return <GardensManager />;
       case 'Weather':
