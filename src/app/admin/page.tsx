@@ -4,10 +4,23 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Database } from 'lucide-react';
 
+interface TableResult {
+  table: string;
+  status: 'success' | 'error';
+  error?: string;
+}
+
+interface DatabaseInitResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  results?: TableResult[];
+}
+
 export default function AdminPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<DatabaseInitResult | null>(null);
 
   const initializeDatabase = async () => {
     setLoading(true);
@@ -21,7 +34,7 @@ export default function AdminPage() {
         },
       });
 
-      const data = await response.json();
+      const data: DatabaseInitResult = await response.json();
       setResult(data);
     } catch (error) {
       setResult({ 
@@ -90,7 +103,7 @@ export default function AdminPage() {
               <div className="space-y-2">
                 <h4 className="font-medium text-gray-200">Table Creation Results:</h4>
                 <div className="space-y-1">
-                  {result.results.map((table: any, index: number) => (
+                  {result.results.map((table: TableResult, index: number) => (
                     <div 
                       key={index}
                       className={`text-sm p-2 rounded ${
