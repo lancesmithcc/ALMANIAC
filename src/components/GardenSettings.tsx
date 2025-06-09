@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Garden, GardenMembershipWithUser, GardenInvitationFormData, GardenInvitationWithDetails } from '@/types';
-import { Send, UserX, Trash2, Shield, Crown, User, Eye, Check, X, Mail } from 'lucide-react';
+import { Send, UserX, Shield, Crown, User, Eye, Mail } from 'lucide-react';
 
 interface GardenSettingsProps {
   gardenId: string;
