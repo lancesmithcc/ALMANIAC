@@ -94,7 +94,14 @@ export default function SetupPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-green-400">🛠️ Almaniac Database Setup</h1>
+        <div className="flex items-center mb-8">
+          <img 
+            src="/almaniaclogo.svg" 
+            alt="Almaniac Logo" 
+            className="h-12 w-12 mr-4" 
+          />
+          <h1 className="text-4xl font-bold text-green-400">🛠️ Almaniac Database Setup</h1>
+        </div>
         
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 className="text-2xl font-semibold mb-4">Database Management</h2>
