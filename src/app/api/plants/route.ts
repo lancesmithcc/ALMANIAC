@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       variety: body.variety || undefined,
       planting_date: new Date(body.planting_date),
       location: body.location,
+      location_id: body.location_id || undefined,
       notes: body.notes || undefined,
       health_status: body.health_status,
       stage: body.stage
