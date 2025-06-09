@@ -69,12 +69,16 @@ export async function POST() {
         )
       `);
       
-      // STEP 3: Drop the old garden_locations table if it exists with wrong schema
-      console.log('Step 3: Dropping old garden_locations table...');
+      // STEP 3: Disable foreign key checks to allow dropping referenced table
+      console.log('Step 3: Disabling foreign key checks...');
+      await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+      
+      // STEP 4: Drop the old garden_locations table if it exists with wrong schema
+      console.log('Step 4: Dropping old garden_locations table...');
       await connection.execute('DROP TABLE IF EXISTS garden_locations');
       
-      // STEP 4: Create the new garden_locations table with correct schema
-      console.log('Step 4: Creating new garden_locations table...');
+      // STEP 5: Create the new garden_locations table with correct schema
+      console.log('Step 5: Creating new garden_locations table...');
       await connection.execute(`
         CREATE TABLE garden_locations (
           id VARCHAR(36) PRIMARY KEY,
@@ -99,6 +103,10 @@ export async function POST() {
         )
       `);
       
+      // STEP 6: Re-enable foreign key checks
+      console.log('Step 6: Re-enabling foreign key checks...');
+      await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+      
       await connection.commit();
       console.log('Schema fix completed successfully!');
       
@@ -108,14 +116,24 @@ export async function POST() {
         originalColumns: tableInfo,
         steps: [
           'Created gardens table',
-          'Created garden_memberships table', 
+          'Created garden_memberships table',
+          'Disabled foreign key checks', 
           'Dropped old garden_locations table',
-          'Created new garden_locations table with garden_id column'
+          'Created new garden_locations table with garden_id column',
+          'Re-enabled foreign key checks'
         ]
       });
       
     } catch (error) {
       console.error('Schema fix step failed:', error);
+      
+      // Try to re-enable foreign key checks even on error
+      try {
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+      } catch (fkError) {
+        console.error('Failed to re-enable foreign key checks:', fkError);
+      }
+      
       await connection.rollback();
       throw error;
     } finally {
