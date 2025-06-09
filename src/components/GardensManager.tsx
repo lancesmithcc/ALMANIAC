@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Users, MapPin, Settings } from 'lucide-react';
 import { Garden, GardenLocation, GardenWithLocations } from '@/types';
+import Link from 'next/link';
 
 export default function GardensManager() {
   const [gardens, setGardens] = useState<GardenWithLocations[]>([]);
@@ -177,13 +178,11 @@ export default function GardensManager() {
                 >
                   <Users className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={() => {/* TODO: Navigate to garden settings */}}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors"
-                  title="Garden Settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
+                <Link href={`/gardens/${garden.id}/settings`} passHref>
+                  <a className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors" title="Garden Settings">
+                    <Settings className="h-4 w-4" />
+                  </a>
+                </Link>
               </div>
             </div>
 

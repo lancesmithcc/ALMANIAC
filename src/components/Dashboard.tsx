@@ -13,7 +13,7 @@ import RecentEntries from './RecentEntries';
 import AIInsights from './AIInsights';
 import WeatherTrendsChart from './WeatherTrendsChart';
 import ThreeDayForecast from '@/components/ThreeDayForecast';
-import GardenLocationsManager from './GardenLocationsManager';
+import GardensManager from './GardensManager';
 import GardenInvitations from './GardenInvitations';
 
 const navItems = [
@@ -60,9 +60,9 @@ export default function Dashboard() {
           </div>
         );
       case 'Plants & Land':
-        return <PlantEntryForm />;
+        return <PlantEntryForm onFormSubmit={() => {}} />;
       case 'Garden Locations':
-        return <GardenLocationsManager />;
+        return <GardensManager />;
       case 'Weather':
         return (
           <div className="space-y-6">

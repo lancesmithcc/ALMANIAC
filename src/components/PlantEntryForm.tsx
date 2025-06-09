@@ -1,13 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plant, GardenLocation } from '@/types';
+import { Plant, GardenLocation, Garden } from '@/types';
 import { 
   Plus,
   X,
   Save,
-  Edit
+  Edit,
+  Camera,
+  MapPin,
+  Leaf,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface PlantEntry {
   id?: string;
@@ -23,31 +30,82 @@ interface PlantEntry {
   updated_at?: string;
 }
 
-export default function PlantEntryForm() {
+interface PlantEntryFormProps {
+  plant?: Plant;
+  onFormSubmit: () => void;
+}
+
+export default function PlantEntryForm({ plant, onFormSubmit }: PlantEntryFormProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [entries, setEntries] = useState<PlantEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [editingPlant, setEditingPlant] = useState<PlantEntry | null>(null);
-  const [gardenLocations, setGardenLocations] = useState<GardenLocation[]>([]);
-
+  const [gardens, setGardens] = useState<Garden[]>([]);
+  const [locations, setLocations] = useState<GardenLocation[]>([]);
+  const [selectedGardenId, setSelectedGardenId] = useState<string>('');
   const [formData, setFormData] = useState<Omit<PlantEntry, 'id' | 'created_at' | 'updated_at'>>({
-    plant_type: '',
-    variety: '',
-    planting_date: '',
-    location: '',
-    location_id: '',
-    notes: '',
-    health_status: 'good',
-    stage: 'seed'
+    plant_type: plant?.plant_type || '',
+    variety: plant?.variety || '',
+    planting_date: plant?.planting_date ? (new Date(plant.planting_date)).toISOString().split('T')[0] : '',
+    location: plant?.location || '',
+    location_id: plant?.location_id || '',
+    notes: plant?.notes || '',
+    health_status: plant?.health_status || 'good',
+    stage: plant?.stage || 'seed'
   });
 
-  // Load plants and garden locations from API when component mounts
+  const fetchGardens = async () => {
+    try {
+      const response = await fetch('/api/gardens');
+      if (response.ok) {
+        const data: Garden[] = await response.json();
+        setGardens(data);
+        if (data.length > 0) {
+          // If editing a plant with a location, try to find its parent garden
+          if (plant?.location_id) {
+            // This is a bit tricky without a direct garden_id on the plant.
+            // For now, we'll just pre-select the first garden and let the user change it.
+            // A better approach would be an API endpoint to get a location's details, including its garden.
+            setSelectedGardenId(data[0].id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch gardens", err);
+    }
+  };
+
   useEffect(() => {
-    fetchPlants();
-    fetchGardenLocations();
-  }, []);
+    fetchGardens();
+  }, [plant]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (!selectedGardenId) {
+        setLocations([]);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/gardens/${selectedGardenId}/locations`);
+        if (response.ok) {
+          const data: GardenLocation[] = await response.json();
+          setLocations(data);
+        } else {
+          setLocations([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch locations", err);
+        setLocations([]);
+      }
+    };
+
+    fetchLocations();
+  }, [selectedGardenId]);
 
   const fetchPlants = async () => {
     try {
@@ -99,21 +157,6 @@ export default function PlantEntryForm() {
       // Keep existing entries if fetch fails
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchGardenLocations = async () => {
-    try {
-      const response = await fetch('/api/garden-locations');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setGardenLocations(data.locations);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching garden locations:', err);
-      // Don't show error for garden locations, just use text input
     }
   };
 
@@ -277,6 +320,28 @@ export default function PlantEntryForm() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleGardenChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const gardenId = e.target.value;
+    setSelectedGardenId(gardenId);
+    // Reset location when garden changes
+    setFormData(prev => ({ ...prev, location_id: '', location: '' }));
+  };
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const locationId = e.target.value;
+    const location = locations.find(l => l.id === locationId);
+    setFormData(prev => ({
+      ...prev,
+      location_id: locationId,
+      location: location?.name || ''
+    }));
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -355,7 +420,8 @@ export default function PlantEntryForm() {
                   <input
                     type="text"
                     value={formData.plant_type}
-                    onChange={(e) => setFormData({ ...formData, plant_type: e.target.value })}
+                    onChange={handleInputChange}
+                    name="plant_type"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="e.g., Tomato, Basil, Corn"
                     required
@@ -370,7 +436,8 @@ export default function PlantEntryForm() {
                   <input
                     type="text"
                     value={formData.variety}
-                    onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
+                    onChange={handleInputChange}
+                    name="variety"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="e.g., Cherokee Purple, Sweet Genovese"
                     disabled={saving}
@@ -384,76 +451,51 @@ export default function PlantEntryForm() {
                   <input
                     type="date"
                     value={formData.planting_date}
-                    onChange={(e) => setFormData({ ...formData, planting_date: e.target.value })}
+                    onChange={handleInputChange}
+                    name="planting_date"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     required
                     disabled={saving}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                <div className="col-span-1">
+                  <label htmlFor="garden" className="block text-sm font-medium text-gray-300 mb-1">
+                    Garden *
+                  </label>
+                  <select
+                    id="garden"
+                    name="garden"
+                    value={selectedGardenId}
+                    onChange={handleGardenChange}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    <option value="">Select a Garden</option>
+                    {gardens.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="col-span-1">
+                  <label htmlFor="location_id" className="block text-sm font-medium text-gray-300 mb-1">
                     Location *
                   </label>
-                  {gardenLocations.length > 0 ? (
-                    <div className="space-y-2">
-                      <select
-                        value={formData.location_id || formData.location}
-                        onChange={(e) => {
-                          const selectedValue = e.target.value;
-                          if (selectedValue === '__custom__') {
-                            setFormData({ ...formData, location: '__custom__', location_id: '' });
-                          } else {
-                            // Find the selected garden location
-                            const selectedLocation = gardenLocations.find(loc => loc.id === selectedValue);
-                            if (selectedLocation) {
-                              setFormData({ 
-                                ...formData, 
-                                location: selectedLocation.name, 
-                                location_id: selectedLocation.id 
-                              });
-                            } else {
-                              // Fallback for text-based locations
-                              setFormData({ ...formData, location: selectedValue, location_id: '' });
-                            }
-                          }
-                        }}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        required
-                        disabled={saving}
-                      >
-                        <option value="">Select a garden location...</option>
-                        {gardenLocations.map((location) => (
-                          <option key={location.id} value={location.id}>
-                            {location.name} {location.description && `- ${location.description}`}
-                          </option>
-                        ))}
-                        <option value="__custom__">Custom location...</option>
-                      </select>
-                      {formData.location === '__custom__' && (
-                        <input
-                          type="text"
-                          value=""
-                          onChange={(e) => setFormData({ ...formData, location: e.target.value, location_id: '' })}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          placeholder="Enter custom location..."
-                          required
-                          disabled={saving}
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="e.g., Garden Bed A, Greenhouse"
-                      required
-                      disabled={saving}
-                    />
-                  )}
+                  <select
+                    id="location_id"
+                    name="location_id"
+                    value={formData.location_id}
+                    onChange={handleLocationChange}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                    disabled={!selectedGardenId || locations.length === 0}
+                  >
+                    <option value="">Select a Location</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -462,7 +504,8 @@ export default function PlantEntryForm() {
                   </label>
                   <select
                     value={formData.health_status}
-                    onChange={(e) => setFormData({ ...formData, health_status: e.target.value as 'excellent' | 'good' | 'fair' | 'poor' })}
+                    onChange={handleInputChange}
+                    name="health_status"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     disabled={saving}
                   >
@@ -479,7 +522,8 @@ export default function PlantEntryForm() {
                   </label>
                   <select
                     value={formData.stage}
-                    onChange={(e) => setFormData({ ...formData, stage: e.target.value as 'seed' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest' })}
+                    onChange={handleInputChange}
+                    name="stage"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     disabled={saving}
                   >
@@ -499,7 +543,8 @@ export default function PlantEntryForm() {
                 </label>
                 <textarea
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={handleInputChange}
+                  name="notes"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Any observations, care notes, or remarks..."
                   rows={3}
@@ -559,7 +604,7 @@ export default function PlantEntryForm() {
             .sort(([a], [b]) => a.localeCompare(b)) // Sort locations alphabetically
             .map(([location, locationPlants]) => {
               // Find matching garden location for additional info
-              const gardenLocation = gardenLocations.find(gl => gl.name === location);
+              const gardenLocation = locations.find(gl => gl.name === location);
               
               return (
                 <div key={location} className="space-y-4">

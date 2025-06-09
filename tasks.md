@@ -223,10 +223,11 @@
 - [x] Update garden-members API to use garden IDs
 - [x] Update garden-invitations API to use garden IDs
 - [x] Create basic GardensManager UI component
-- [ ] Create migration script for existing data
-- [ ] Update existing components to use new structure
-- [ ] Update garden member management to work with gardens
-- [ ] Test the new garden sharing system
+- [x] Create migration script for existing data
+- [x] Update existing components to use new structure
+- [x] Update garden member management to work with gardens
+- [x] Test the new garden sharing system
+- [x] Move sharing functionality to a dedicated garden settings page
 
 ## Next Steps for User
 1. **IMMEDIATE:** Commit and push the enhanced AI system
