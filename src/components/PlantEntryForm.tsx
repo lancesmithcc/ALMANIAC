@@ -357,7 +357,9 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('API Error Response:', errorData);
+        console.error('API Error Response:', JSON.stringify(errorData, null, 2));
+        console.error('Response status:', response.status);
+        console.error('Response headers:', response.headers);
         throw new Error(errorData.error || `Failed to create location (${response.status})`);
       }
 
@@ -422,7 +424,9 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
         <div className="flex space-x-3">
           <button
             onClick={() => setIsLocationFormOpen(true)}
-            className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!selectedGardenId}
+            title={!selectedGardenId ? "Create a garden first in Settings" : "Add a new location"}
           >
             <MapPin className="w-4 h-4" />
             <span>Add Location</span>
@@ -449,6 +453,37 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
           </button>
         </div>
       )}
+
+      {/* Debug Info - Remove this after fixing */}
+      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+        <p className="text-yellow-400 text-sm">
+          Debug Info: Garden ID = {selectedGardenId || 'None'} | Locations: {locations.length}
+        </p>
+        <button
+          onClick={async () => {
+            console.log('Testing garden fetch...');
+            try {
+              const response = await fetch('/api/gardens');
+              console.log('Gardens response status:', response.status);
+              if (response.ok) {
+                const data = await response.json();
+                console.log('Gardens data:', JSON.stringify(data, null, 2));
+                setError(null);
+              } else {
+                const errorData = await response.json();
+                console.log('Gardens error:', JSON.stringify(errorData, null, 2));
+                setError(`Garden fetch failed: ${errorData.error || response.status}`);
+              }
+            } catch (err) {
+              console.error('Garden fetch error:', err);
+              setError(`Garden fetch error: ${err}`);
+            }
+          }}
+          className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline"
+        >
+          Test Garden Fetch
+        </button>
+      </div>
 
       {/* Form Modal */}
       {isFormOpen && (
