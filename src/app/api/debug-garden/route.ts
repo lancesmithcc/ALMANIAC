@@ -1,7 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getGardens, getUserGardenMembership } from '@/lib/database';
+import { Garden, GardenMembership } from '@/types';
+
+interface MembershipCheck {
+  gardenId: string;
+  gardenName: string;
+  membership?: GardenMembership | null;
+  canEditGarden: boolean;
+  error?: string;
+}
+
+interface DebugInfo {
+  userId: string;
+  username: string;
+  gardens: Garden[];
+  membershipChecks: MembershipCheck[];
+}
 
 export async function GET() {
   try {
@@ -13,9 +29,9 @@ export async function GET() {
     // Get user's gardens
     const gardens = await getGardens(session.user.id);
     
-    const debugInfo: any = {
+    const debugInfo: DebugInfo = {
       userId: session.user.id,
-      username: session.user.username,
+      username: session.user.username || 'Unknown',
       gardens: gardens,
       membershipChecks: []
     };
@@ -34,6 +50,8 @@ export async function GET() {
         debugInfo.membershipChecks.push({
           gardenId: garden.id,
           gardenName: garden.name,
+          membership: null,
+          canEditGarden: false,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
