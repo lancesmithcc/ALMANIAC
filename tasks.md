@@ -18,6 +18,9 @@
 - [x] Add `user_id` to data tables (plants, activities, etc.)
 - [x] **FIXED:** Create fix-db API route to add missing user_id columns to existing tables
 - [x] **FIXED:** Update setup page with database repair functionality
+- [x] **CRITICAL FIX:** Diagnosed garden_locations table missing garden_id column
+- [x] **CRITICAL FIX:** Created fix-garden-schema API endpoint to rebuild garden tables
+- [x] **CRITICAL FIX:** Added "Fix Database Schema" button to debug panel
 
 ## API Integration
 - [x] Set up Weather API integration
@@ -485,3 +488,13 @@ Without this initialization, the following features will fail with 500 errors:
 - Garden locations functionality
 - Plant management
 - Multi-user garden system
+
+## Garden System Implementation
+- [x] Remove Garden Locations tab (move management to Plants page)
+- [x] Restructure PlantEntryForm for garden-based locations
+- [x] Simplify data model: Users → Single Garden → Multiple Locations → Plants
+- [x] Add location creation form modal to Plants page
+- [x] Implement fetchUserGarden() to auto-select user's garden
+- [x] Update API validation to accept location_id for plants
+- [x] **PENDING:** Apply garden schema fix to production database
+- [x] **PENDING:** Test location creation after schema fix

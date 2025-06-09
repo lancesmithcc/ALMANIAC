@@ -489,6 +489,35 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
         >
           Test Garden Debug
         </button>
+        
+        <button
+          onClick={async () => {
+            try {
+              setError('');
+              const response = await fetch('/api/fix-garden-schema', { method: 'POST' });
+              const data = await response.json();
+              
+              if (response.ok) {
+                console.log('Schema Fix Result:', data);
+                setError('Database schema fixed! Please refresh the page.');
+                // Refresh the locations after schema fix
+                setTimeout(() => {
+                  window.location.reload();
+                }, 2000);
+              } else {
+                const errorData = data;
+                console.log('Schema fix error:', JSON.stringify(errorData, null, 2));
+                setError(`Schema fix failed: ${errorData.error || response.status}`);
+              }
+            } catch (err) {
+              console.error('Schema fix error:', err);
+              setError(`Schema fix error: ${err}`);
+            }
+          }}
+          className="text-red-300 hover:text-red-200 text-sm mt-2 underline ml-4"
+        >
+          Fix Database Schema
+        </button>
       </div>
 
       {/* Form Modal */}
