@@ -316,6 +316,32 @@ export async function deletePlant(id: string, userId: string): Promise<void> {
   await pool.execute('DELETE FROM plants WHERE id = ? AND user_id = ?', [id, userId]);
 }
 
+export async function getPlantsByGardenId(gardenId: string): Promise<Plant[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT p.* 
+    FROM plants p
+    INNER JOIN garden_locations gl ON p.location_id = gl.id
+    WHERE gl.garden_id = ?
+    ORDER BY p.created_at DESC
+  `, [gardenId]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    user_id: row.user_id,
+    plant_type: row.plant_type,
+    variety: row.variety,
+    planting_date: row.planting_date,
+    location: row.location,
+    location_id: row.location_id,
+    notes: row.notes,
+    health_status: row.health_status,
+    stage: row.stage,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  }));
+}
+
 // Weather operations
 export async function saveWeatherRecord(weather: Omit<WeatherRecord, 'id' | 'created_at'>) {
   const pool = getDbPool();

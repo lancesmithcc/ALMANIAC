@@ -9,6 +9,7 @@ import {
   Edit,
   MapPin,
 } from 'lucide-react';
+import ShareGardenButton from './ShareGardenButton';
 
 interface PlantEntry {
   id?: string;
@@ -38,6 +39,7 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
 
   const [locations, setLocations] = useState<GardenLocation[]>([]);
   const [selectedGardenId, setSelectedGardenId] = useState<string>('');
+  const [currentGarden, setCurrentGarden] = useState<Garden | null>(null);
   const [isLocationFormOpen, setIsLocationFormOpen] = useState(false);
   const [locationFormData, setLocationFormData] = useState({
     name: '',
@@ -62,6 +64,7 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
         if (data.length > 0) {
           // Use the first (and only) garden for this user
           setSelectedGardenId(data[0].id);
+          setCurrentGarden(data[0]);
           console.log('Found user garden:', data[0].id, data[0].name);
         } else {
           console.log('No gardens found for user');
@@ -422,6 +425,12 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
           <p className="text-gray-400 mt-1">Track your plants, crops, and land conditions</p>
         </div>
         <div className="flex space-x-3">
+          {currentGarden && (
+            <ShareGardenButton 
+              gardenId={currentGarden.id} 
+              gardenName={currentGarden.name} 
+            />
+          )}
           <button
             onClick={() => setIsLocationFormOpen(true)}
             className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -454,71 +463,7 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
         </div>
       )}
 
-      {/* Debug Info - Remove this after fixing */}
-      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-        <p className="text-yellow-400 text-sm">
-          Debug Info: Garden ID = {selectedGardenId || 'None'} | Locations: {locations.length}
-        </p>
-        <button
-          onClick={async () => {
-            console.log('Testing garden debug...');
-            try {
-              const response = await fetch('/api/debug-garden');
-              console.log('Debug response status:', response.status);
-              if (response.ok) {
-                const data = await response.json();
-                console.log('Debug data:', JSON.stringify(data, null, 2));
-                setError(null);
-                
-                // Set garden ID if found
-                if (data.gardens && data.gardens.length > 0) {
-                  setSelectedGardenId(data.gardens[0].id);
-                  console.log('Set garden ID to:', data.gardens[0].id);
-                }
-              } else {
-                const errorData = await response.json();
-                console.log('Debug error:', JSON.stringify(errorData, null, 2));
-                setError(`Debug failed: ${errorData.error || response.status}`);
-              }
-            } catch (err) {
-              console.error('Debug error:', err);
-              setError(`Debug error: ${err}`);
-            }
-          }}
-          className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline"
-        >
-          Test Garden Debug
-        </button>
-        
-        <button
-          onClick={async () => {
-            try {
-              setError('');
-              const response = await fetch('/api/fix-garden-schema', { method: 'POST' });
-              const data = await response.json();
-              
-              if (response.ok) {
-                console.log('Schema Fix Result:', data);
-                setError('Database schema fixed! Please refresh the page.');
-                // Refresh the locations after schema fix
-                setTimeout(() => {
-                  window.location.reload();
-                }, 2000);
-              } else {
-                const errorData = data;
-                console.log('Schema fix error:', JSON.stringify(errorData, null, 2));
-                setError(`Schema fix failed: ${errorData.error || response.status}`);
-              }
-            } catch (err) {
-              console.error('Schema fix error:', err);
-              setError(`Schema fix error: ${err}`);
-            }
-          }}
-          className="text-red-300 hover:text-red-200 text-sm mt-2 underline ml-4"
-        >
-          Fix Database Schema
-        </button>
-      </div>
+
 
       {/* Form Modal */}
       {isFormOpen && (
