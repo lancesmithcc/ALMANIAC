@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Users, MapPin, Settings, Trash2 } from 'lucide-react';
+import { Plus, Users, MapPin, Settings } from 'lucide-react';
 import { Garden, GardenLocation, GardenWithLocations } from '@/types';
 
-interface GardensManagerProps {
-  userId: string;
-}
-
-export default function GardensManager({ userId }: GardensManagerProps) {
+export default function GardensManager() {
   const [gardens, setGardens] = useState<GardenWithLocations[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
