@@ -117,6 +117,25 @@ export default function PlantEntryForm() {
     }
   };
 
+  const logActivity = async (type: string, description: string, location?: string) => {
+    try {
+      await fetch('/api/activities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          description,
+          location: location || formData.location,
+        }),
+      });
+    } catch (err) {
+      console.error('Error logging activity:', err);
+      // Don't throw - activity logging shouldn't break the main flow
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -142,6 +161,14 @@ export default function PlantEntryForm() {
 
       const result = await response.json();
       if (result.success) {
+        // Log activity
+        const plantName = formData.variety ? `${formData.plant_type} (${formData.variety})` : formData.plant_type;
+        if (editingPlant) {
+          await logActivity('observation', `Updated ${plantName} details`);
+        } else {
+          await logActivity('planting', `Added new ${plantName} to garden`);
+        }
+
         // Reset form
         setFormData({
           plant_type: '',
@@ -173,12 +200,21 @@ export default function PlantEntryForm() {
     }
 
     try {
+      // Find the plant to get its details for logging
+      const plantToDelete = entries.find((p: PlantEntry) => p.id === id);
+      
       const response = await fetch(`/api/plants/${id}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
         throw new Error('Failed to delete plant');
+      }
+
+      // Log activity
+      if (plantToDelete) {
+        const plantName = plantToDelete.variety ? `${plantToDelete.plant_type} (${plantToDelete.variety})` : plantToDelete.plant_type;
+        await logActivity('observation', `Removed ${plantName} from garden`, plantToDelete.location);
       }
 
       // Refresh the plants list

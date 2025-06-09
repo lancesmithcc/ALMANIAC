@@ -374,14 +374,14 @@ interface AvgHealth {
   avg_health: number;
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(userId: string) {
   const pool = getDbPool();
   
   try {
-    const [plantsCount] = await pool.execute('SELECT COUNT(*) as total FROM plants');
-    const [healthyPlants] = await pool.execute("SELECT COUNT(*) as healthy FROM plants WHERE health_status IN ('excellent', 'good')");
-    const [needsAttention] = await pool.execute("SELECT COUNT(*) as needs_attention FROM plants WHERE health_status IN ('fair', 'poor')");
-    const [recentActivities] = await pool.execute('SELECT COUNT(*) as recent FROM activity_logs WHERE timestamp > DATE_SUB(NOW(), INTERVAL 7 DAY)');
+    const [plantsCount] = await pool.execute('SELECT COUNT(*) as total FROM plants WHERE user_id = ?', [userId]);
+    const [healthyPlants] = await pool.execute("SELECT COUNT(*) as healthy FROM plants WHERE user_id = ? AND health_status IN ('excellent', 'good')", [userId]);
+    const [needsAttention] = await pool.execute("SELECT COUNT(*) as needs_attention FROM plants WHERE user_id = ? AND health_status IN ('fair', 'poor')", [userId]);
+    const [recentActivities] = await pool.execute('SELECT COUNT(*) as recent FROM activity_logs WHERE user_id = ? AND timestamp > DATE_SUB(NOW(), INTERVAL 7 DAY)', [userId]);
     const [avgHealth] = await pool.execute(`
       SELECT AVG(
         CASE health_status 
@@ -391,17 +391,40 @@ export async function getDashboardStats() {
           WHEN 'poor' THEN 40
           ELSE 50
         END
-      ) as avg_health FROM plants
-    `);
+      ) as avg_health FROM plants WHERE user_id = ?
+    `, [userId]);
     
+    // Calculate next harvest estimate based on plant stages
+    const [nextHarvest] = await pool.execute(`
+      SELECT MIN(
+        CASE stage 
+          WHEN 'seedling' THEN 60
+          WHEN 'vegetative' THEN 30
+          WHEN 'flowering' THEN 14
+          WHEN 'fruiting' THEN 7
+          ELSE 30
+        END
+      ) as next_harvest_days FROM plants WHERE user_id = ? AND stage IN ('seedling', 'vegetative', 'flowering', 'fruiting')
+    `, [userId]);
+
+    // Check for weather alerts (simplified - could be enhanced with real weather API)
+    const [recentWeather] = await pool.execute(`
+      SELECT COUNT(*) as alerts FROM weather_records 
+      WHERE recorded_at > DATE_SUB(NOW(), INTERVAL 24 HOUR) 
+      AND (temperature > 90 OR temperature < 32 OR precipitation > 1)
+    `);
+
+    const nextHarvestDays = (nextHarvest as { next_harvest_days?: number }[])[0]?.next_harvest_days || 30;
+    const weatherAlerts = (recentWeather as { alerts?: number }[])[0]?.alerts || 0;
+
     return {
       total_plants: (plantsCount as PlantsCount[])[0].total,
       active_plants: (healthyPlants as HealthyPlants[])[0].healthy,
       plants_needing_attention: (needsAttention as NeedsAttention[])[0].needs_attention,
       recent_activities: (recentActivities as RecentActivities[])[0].recent,
       average_health_score: Math.round((avgHealth as AvgHealth[])[0].avg_health || 0),
-      next_harvest_days: 7, // This would be calculated based on plant stages and growth data
-      weather_alerts: 0 // This would be based on weather conditions
+      next_harvest_days: nextHarvestDays,
+      weather_alerts: weatherAlerts
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
