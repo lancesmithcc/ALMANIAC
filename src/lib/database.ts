@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
-import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, GardenLocation, DailyWeatherTrend, User } from '@/types';
+import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, GardenLocation, DailyWeatherTrend, User, GardenMembership, GardenInvitation, GardenMembershipWithUser, GardenInvitationWithDetails, DEFAULT_PERMISSIONS } from '@/types';
 import bcrypt from 'bcryptjs';
 
 // Database connection configuration
@@ -133,6 +133,52 @@ export const createTablesSQL = `
     INDEX idx_user_id (user_id),
     INDEX idx_name (name),
     UNIQUE KEY unique_user_location (user_id, name)
+  );
+
+  -- Garden memberships table (for multi-user gardens)
+  CREATE TABLE IF NOT EXISTS garden_memberships (
+    id VARCHAR(36) PRIMARY KEY,
+    garden_location_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    role ENUM('owner', 'admin', 'member', 'viewer') NOT NULL DEFAULT 'member',
+    can_edit_garden BOOLEAN DEFAULT FALSE,
+    can_add_plants BOOLEAN DEFAULT TRUE,
+    can_edit_plants BOOLEAN DEFAULT TRUE,
+    can_delete_plants BOOLEAN DEFAULT FALSE,
+    can_invite_users BOOLEAN DEFAULT FALSE,
+    can_manage_members BOOLEAN DEFAULT FALSE,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (garden_location_id) REFERENCES garden_locations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_garden_user (garden_location_id, user_id),
+    INDEX idx_garden_location_id (garden_location_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_role (role)
+  );
+
+  -- Garden invitations table
+  CREATE TABLE IF NOT EXISTS garden_invitations (
+    id VARCHAR(36) PRIMARY KEY,
+    garden_location_id VARCHAR(36) NOT NULL,
+    invited_by_user_id VARCHAR(36) NOT NULL,
+    invited_user_email VARCHAR(255) NOT NULL,
+    invited_user_id VARCHAR(36),
+    role ENUM('admin', 'member', 'viewer') NOT NULL DEFAULT 'member',
+    status ENUM('pending', 'accepted', 'declined', 'expired') DEFAULT 'pending',
+    message TEXT,
+    expires_at DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (garden_location_id) REFERENCES garden_locations(id) ON DELETE CASCADE,
+    FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_garden_location_id (garden_location_id),
+    INDEX idx_invited_user_email (invited_user_email),
+    INDEX idx_invited_user_id (invited_user_id),
+    INDEX idx_status (status),
+    INDEX idx_expires_at (expires_at)
   );
 `;
 
@@ -492,13 +538,43 @@ export async function getWeatherTrends(days: 7 | 30 | 90 = 30): Promise<DailyWea
 // Garden Location operations
 export async function createGardenLocation(location: Omit<GardenLocation, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
   const pool = getDbPool();
-  const id = uuidv4();
-  await pool.execute(
-    `INSERT INTO garden_locations (id, user_id, name, description, notes, size, soil_type, light_conditions, irrigation_type, microclimate_notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, location.user_id, location.name, location.description || null, location.notes || null, location.size || null, location.soil_type || null, location.light_conditions || null, location.irrigation_type || 'manual', location.microclimate_notes || null]
-  );
-  return id;
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const id = uuidv4();
+    await connection.execute(
+      `INSERT INTO garden_locations (id, user_id, name, description, notes, size, soil_type, light_conditions, irrigation_type, microclimate_notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, location.user_id, location.name, location.description || null, location.notes || null, location.size || null, location.soil_type || null, location.light_conditions || null, location.irrigation_type || 'manual', location.microclimate_notes || null]
+    );
+    
+    // Create owner membership
+    const membershipId = uuidv4();
+    const ownerPermissions = DEFAULT_PERMISSIONS.owner;
+    
+    await connection.execute(
+      `INSERT INTO garden_memberships (
+        id, garden_location_id, user_id, role, 
+        can_edit_garden, can_add_plants, can_edit_plants, can_delete_plants, 
+        can_invite_users, can_manage_members, joined_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        membershipId, id, location.user_id, 'owner',
+        ownerPermissions.can_edit_garden, ownerPermissions.can_add_plants, ownerPermissions.can_edit_plants,
+        ownerPermissions.can_delete_plants, ownerPermissions.can_invite_users, ownerPermissions.can_manage_members
+      ]
+    );
+    
+    await connection.commit();
+    return id;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function getGardenLocations(userId: string): Promise<GardenLocation[]> {
@@ -532,4 +608,276 @@ export async function updateGardenLocation(id: string, userId: string, updates: 
 export async function deleteGardenLocation(id: string, userId: string): Promise<void> {
   const pool = getDbPool();
   await pool.execute('DELETE FROM garden_locations WHERE id = ? AND user_id = ?', [id, userId]);
+}
+
+// Garden Membership Functions
+export async function createGardenMembership(membership: Omit<GardenMembership, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  const pool = getDbPool();
+  const id = uuidv4();
+  const permissions = DEFAULT_PERMISSIONS[membership.role as keyof typeof DEFAULT_PERMISSIONS];
+  
+  await pool.execute(
+    `INSERT INTO garden_memberships (
+      id, garden_location_id, user_id, role, 
+      can_edit_garden, can_add_plants, can_edit_plants, can_delete_plants, 
+      can_invite_users, can_manage_members, joined_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, membership.garden_location_id, membership.user_id, membership.role,
+      permissions.can_edit_garden, permissions.can_add_plants, permissions.can_edit_plants, 
+      permissions.can_delete_plants, permissions.can_invite_users, permissions.can_manage_members,
+      membership.joined_at
+    ]
+  );
+  return id;
+}
+
+export async function getGardenMemberships(gardenLocationId: string): Promise<GardenMembershipWithUser[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT 
+      gm.id, gm.garden_location_id, gm.user_id, gm.role,
+      gm.can_edit_garden, gm.can_add_plants, gm.can_edit_plants, 
+      gm.can_delete_plants, gm.can_invite_users, gm.can_manage_members,
+      gm.joined_at, gm.created_at,
+      u.username, u.email
+    FROM garden_memberships gm
+    JOIN users u ON gm.user_id = u.id
+    WHERE gm.garden_location_id = ?
+    ORDER BY gm.role = 'owner' DESC, gm.role = 'admin' DESC, gm.created_at ASC
+  `, [gardenLocationId]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    garden_location_id: row.garden_location_id,
+    user_id: row.user_id,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    permissions: {
+      can_edit_garden: Boolean(row.can_edit_garden),
+      can_add_plants: Boolean(row.can_add_plants),
+      can_edit_plants: Boolean(row.can_edit_plants),
+      can_delete_plants: Boolean(row.can_delete_plants),
+      can_invite_users: Boolean(row.can_invite_users),
+      can_manage_members: Boolean(row.can_manage_members),
+    },
+    joined_at: new Date(row.joined_at),
+    created_at: new Date(row.created_at),
+  }));
+}
+
+export async function getUserGardenMembership(gardenLocationId: string, userId: string): Promise<GardenMembership | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT * FROM garden_memberships 
+    WHERE garden_location_id = ? AND user_id = ?
+  `, [gardenLocationId, userId]);
+  
+  const memberships = rows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (memberships.length > 0) {
+    const row = memberships[0];
+    return {
+      id: row.id,
+      garden_location_id: row.garden_location_id,
+      user_id: row.user_id,
+      role: row.role,
+      permissions: {
+        can_edit_garden: Boolean(row.can_edit_garden),
+        can_add_plants: Boolean(row.can_add_plants),
+        can_edit_plants: Boolean(row.can_edit_plants),
+        can_delete_plants: Boolean(row.can_delete_plants),
+        can_invite_users: Boolean(row.can_invite_users),
+        can_manage_members: Boolean(row.can_manage_members),
+      },
+      joined_at: new Date(row.joined_at),
+      created_at: new Date(row.created_at),
+      updated_at: row.updated_at ? new Date(row.updated_at) : undefined,
+    };
+  }
+  return null;
+}
+
+export async function updateGardenMembershipRole(membershipId: string, role: 'admin' | 'member' | 'viewer'): Promise<void> {
+  const pool = getDbPool();
+  const permissions = DEFAULT_PERMISSIONS[role as keyof typeof DEFAULT_PERMISSIONS];
+  
+  await pool.execute(`
+    UPDATE garden_memberships SET 
+      role = ?, 
+      can_edit_garden = ?, can_add_plants = ?, can_edit_plants = ?, 
+      can_delete_plants = ?, can_invite_users = ?, can_manage_members = ?,
+      updated_at = NOW()
+    WHERE id = ?
+  `, [
+    role, permissions.can_edit_garden, permissions.can_add_plants, permissions.can_edit_plants,
+    permissions.can_delete_plants, permissions.can_invite_users, permissions.can_manage_members,
+    membershipId
+  ]);
+}
+
+export async function removeGardenMembership(membershipId: string): Promise<void> {
+  const pool = getDbPool();
+  await pool.execute('DELETE FROM garden_memberships WHERE id = ?', [membershipId]);
+}
+
+// Garden Invitation Functions
+export async function createGardenInvitation(invitation: Omit<GardenInvitation, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  const pool = getDbPool();
+  const id = uuidv4();
+  
+  await pool.execute(
+    `INSERT INTO garden_invitations (
+      id, garden_location_id, invited_by_user_id, invited_user_email, 
+      invited_user_id, role, status, message, expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, invitation.garden_location_id, invitation.invited_by_user_id, 
+      invitation.invited_user_email, invitation.invited_user_id || null,
+      invitation.role, invitation.status, invitation.message || null, invitation.expires_at
+    ]
+  );
+  return id;
+}
+
+export async function getGardenInvitations(gardenLocationId: string): Promise<GardenInvitationWithDetails[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT 
+      gi.*, gl.name as garden_name, u.username as invited_by_username
+    FROM garden_invitations gi
+    JOIN garden_locations gl ON gi.garden_location_id = gl.id
+    JOIN users u ON gi.invited_by_user_id = u.id
+    WHERE gi.garden_location_id = ?
+    ORDER BY gi.created_at DESC
+  `, [gardenLocationId]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    garden_location_id: row.garden_location_id,
+    garden_name: row.garden_name,
+    invited_by_user_id: row.invited_by_user_id,
+    invited_by_username: row.invited_by_username,
+    invited_user_email: row.invited_user_email,
+    invited_user_id: row.invited_user_id,
+    role: row.role,
+    status: row.status,
+    message: row.message,
+    expires_at: new Date(row.expires_at),
+    created_at: new Date(row.created_at),
+  }));
+}
+
+export async function getUserInvitations(userEmail: string): Promise<GardenInvitationWithDetails[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT 
+      gi.*, gl.name as garden_name, u.username as invited_by_username
+    FROM garden_invitations gi
+    JOIN garden_locations gl ON gi.garden_location_id = gl.id
+    JOIN users u ON gi.invited_by_user_id = u.id
+    WHERE gi.invited_user_email = ? AND gi.status = 'pending' AND gi.expires_at > NOW()
+    ORDER BY gi.created_at DESC
+  `, [userEmail]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    garden_location_id: row.garden_location_id,
+    garden_name: row.garden_name,
+    invited_by_user_id: row.invited_by_user_id,
+    invited_by_username: row.invited_by_username,
+    invited_user_email: row.invited_user_email,
+    invited_user_id: row.invited_user_id,
+    role: row.role,
+    status: row.status,
+    message: row.message,
+    expires_at: new Date(row.expires_at),
+    created_at: new Date(row.created_at),
+  }));
+}
+
+export async function acceptGardenInvitation(invitationId: string, userId: string): Promise<void> {
+  const pool = getDbPool();
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    // Get invitation details
+    const [invitationRows] = await connection.execute(
+      'SELECT * FROM garden_invitations WHERE id = ? AND status = "pending"',
+      [invitationId]
+    );
+    
+    const invitations = invitationRows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (invitations.length === 0) {
+      throw new Error('Invitation not found or already processed');
+    }
+    
+    const invitation = invitations[0];
+    
+    // Create garden membership
+    const membershipId = uuidv4();
+    const permissions = DEFAULT_PERMISSIONS[invitation.role as keyof typeof DEFAULT_PERMISSIONS];
+    
+    await connection.execute(
+      `INSERT INTO garden_memberships (
+        id, garden_location_id, user_id, role, 
+        can_edit_garden, can_add_plants, can_edit_plants, can_delete_plants, 
+        can_invite_users, can_manage_members, joined_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        membershipId, invitation.garden_location_id, userId, invitation.role,
+        permissions.can_edit_garden, permissions.can_add_plants, permissions.can_edit_plants,
+        permissions.can_delete_plants, permissions.can_invite_users, permissions.can_manage_members
+      ]
+    );
+    
+    // Update invitation status
+    await connection.execute(
+      'UPDATE garden_invitations SET status = "accepted", invited_user_id = ?, updated_at = NOW() WHERE id = ?',
+      [userId, invitationId]
+    );
+    
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function declineGardenInvitation(invitationId: string): Promise<void> {
+  const pool = getDbPool();
+  await pool.execute(
+    'UPDATE garden_invitations SET status = "declined", updated_at = NOW() WHERE id = ?',
+    [invitationId]
+  );
+}
+
+export async function getUserAccessibleGardens(userId: string): Promise<GardenLocation[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT DISTINCT gl.*
+    FROM garden_locations gl
+    LEFT JOIN garden_memberships gm ON gl.id = gm.garden_location_id
+    WHERE gl.user_id = ? OR gm.user_id = ?
+    ORDER BY gl.created_at DESC
+  `, [userId, userId]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    user_id: row.user_id,
+    name: row.name,
+    description: row.description,
+    notes: row.notes,
+    size: row.size,
+    soil_type: row.soil_type,
+    light_conditions: row.light_conditions,
+    irrigation_type: row.irrigation_type,
+    microclimate_notes: row.microclimate_notes,
+    created_at: new Date(row.created_at),
+    updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
+  }));
 }

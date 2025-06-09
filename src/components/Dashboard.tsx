@@ -14,6 +14,7 @@ import AIInsights from './AIInsights';
 import WeatherTrendsChart from './WeatherTrendsChart';
 import ThreeDayForecast from '@/components/ThreeDayForecast';
 import GardenLocationsManager from './GardenLocationsManager';
+import GardenInvitations from './GardenInvitations';
 
 const navItems = [
   { name: 'Overview', icon: AreaChart },
@@ -44,14 +45,17 @@ export default function Dashboard() {
     switch (activeTab) {
       case 'Overview':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <AnalyticsCards />
-              <ThreeDayForecast /> 
-            </div>
-            <div className="lg:col-span-1 space-y-6">
-              <WeatherWidget />
-              <RecentEntries />
+          <div className="space-y-6">
+            <GardenInvitations />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <AnalyticsCards />
+                <ThreeDayForecast /> 
+              </div>
+              <div className="lg:col-span-1 space-y-6">
+                <WeatherWidget />
+                <RecentEntries />
+              </div>
             </div>
           </div>
         );

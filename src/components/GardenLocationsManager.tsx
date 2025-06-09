@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Plus,
   X,
   Save,
   Edit,
-  MapPin
+  MapPin,
+  Users
 } from 'lucide-react';
 
 interface LocationEntry {
@@ -24,6 +26,7 @@ interface LocationEntry {
 }
 
 export default function GardenLocationsManager() {
+  const router = useRouter();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [locations, setLocations] = useState<LocationEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -433,6 +436,13 @@ export default function GardenLocationsManager() {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => router.push(`/garden/${location.id}/members`)}
+                    className="text-green-400 hover:text-green-300 transition-colors p-1"
+                    title="Manage members"
+                  >
+                    <Users className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => editLocation(location)}
                     className="text-blue-400 hover:text-blue-300 transition-colors p-1"

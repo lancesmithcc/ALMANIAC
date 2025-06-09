@@ -360,4 +360,114 @@ export interface SessionUser {
   id: string;
   username: string;
   email?: string | null;
-} 
+}
+
+// Multi-user garden system types
+export interface GardenMembership {
+  id: string;
+  garden_location_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  permissions: {
+    can_edit_garden: boolean;
+    can_add_plants: boolean;
+    can_edit_plants: boolean;
+    can_delete_plants: boolean;
+    can_invite_users: boolean;
+    can_manage_members: boolean;
+  };
+  joined_at: Date;
+  created_at: Date;
+  updated_at?: Date;
+}
+
+export interface GardenInvitation {
+  id: string;
+  garden_location_id: string;
+  invited_by_user_id: string;
+  invited_user_email: string;
+  invited_user_id?: string; // Set when user accepts invitation
+  role: 'admin' | 'member' | 'viewer';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  message?: string;
+  expires_at: Date;
+  created_at: Date;
+  updated_at?: Date;
+}
+
+export interface GardenMembershipWithUser {
+  id: string;
+  garden_location_id: string;
+  user_id: string;
+  username: string;
+  email?: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  permissions: {
+    can_edit_garden: boolean;
+    can_add_plants: boolean;
+    can_edit_plants: boolean;
+    can_delete_plants: boolean;
+    can_invite_users: boolean;
+    can_manage_members: boolean;
+  };
+  joined_at: Date;
+  created_at: Date;
+}
+
+export interface GardenInvitationWithDetails {
+  id: string;
+  garden_location_id: string;
+  garden_name: string;
+  invited_by_user_id: string;
+  invited_by_username: string;
+  invited_user_email: string;
+  invited_user_id?: string;
+  role: 'admin' | 'member' | 'viewer';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  message?: string;
+  expires_at: Date;
+  created_at: Date;
+}
+
+// Form types for invitations
+export interface GardenInvitationFormData {
+  email: string;
+  role: 'admin' | 'member' | 'viewer';
+  message?: string;
+}
+
+// Permission helpers
+export const DEFAULT_PERMISSIONS = {
+  owner: {
+    can_edit_garden: true,
+    can_add_plants: true,
+    can_edit_plants: true,
+    can_delete_plants: true,
+    can_invite_users: true,
+    can_manage_members: true,
+  },
+  admin: {
+    can_edit_garden: true,
+    can_add_plants: true,
+    can_edit_plants: true,
+    can_delete_plants: true,
+    can_invite_users: true,
+    can_manage_members: true,
+  },
+  member: {
+    can_edit_garden: false,
+    can_add_plants: true,
+    can_edit_plants: true,
+    can_delete_plants: false,
+    can_invite_users: false,
+    can_manage_members: false,
+  },
+  viewer: {
+    can_edit_garden: false,
+    can_add_plants: false,
+    can_edit_plants: false,
+    can_delete_plants: false,
+    can_invite_users: false,
+    can_manage_members: false,
+  },
+} as const; 
