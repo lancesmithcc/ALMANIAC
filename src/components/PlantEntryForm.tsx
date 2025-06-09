@@ -62,7 +62,13 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
         if (data.length > 0) {
           // Use the first (and only) garden for this user
           setSelectedGardenId(data[0].id);
+          console.log('Found user garden:', data[0].id, data[0].name);
+        } else {
+          console.log('No gardens found for user');
+          setError('No garden found. Please create a garden in Settings first.');
         }
+      } else {
+        console.error('Failed to fetch gardens:', response.status);
       }
     } catch (err) {
       console.error("Failed to fetch user garden", err);
@@ -331,9 +337,11 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
   const handleLocationFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGardenId) {
-      setError('Please select a garden first');
+      setError('No garden found. Please create a garden first in Settings.');
       return;
     }
+    
+    console.log('Creating location for garden:', selectedGardenId);
 
     try {
       setSaving(true);
@@ -349,7 +357,8 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create location');
+        console.error('API Error Response:', errorData);
+        throw new Error(errorData.error || `Failed to create location (${response.status})`);
       }
 
       // Reset form and refresh locations
