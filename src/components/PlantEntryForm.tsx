@@ -7,6 +7,7 @@ import {
   X,
   Save,
   Edit,
+  MapPin,
 } from 'lucide-react';
 
 interface PlantEntry {
@@ -34,9 +35,14 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingPlant, setEditingPlant] = useState<PlantEntry | null>(null);
-  const [gardens, setGardens] = useState<Garden[]>([]);
+
   const [locations, setLocations] = useState<GardenLocation[]>([]);
   const [selectedGardenId, setSelectedGardenId] = useState<string>('');
+  const [isLocationFormOpen, setIsLocationFormOpen] = useState(false);
+  const [locationFormData, setLocationFormData] = useState({
+    name: '',
+    description: '',
+  });
   const [formData, setFormData] = useState<Omit<PlantEntry, 'id' | 'created_at' | 'updated_at'>>({
     plant_type: plant?.plant_type || '',
     variety: plant?.variety || '',
@@ -48,30 +54,24 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
     stage: plant?.stage || 'seed'
   });
 
-  const fetchGardens = useCallback(async () => {
+  const fetchUserGarden = useCallback(async () => {
     try {
       const response = await fetch('/api/gardens');
       if (response.ok) {
         const data: Garden[] = await response.json();
-        setGardens(data);
         if (data.length > 0) {
-          // If editing a plant with a location, try to find its parent garden
-          if (plant?.location_id) {
-            // This is a bit tricky without a direct garden_id on the plant.
-            // For now, we'll just pre-select the first garden and let the user change it.
-            // A better approach would be an API endpoint to get a location's details, including its garden.
-            setSelectedGardenId(data[0].id);
-          }
+          // Use the first (and only) garden for this user
+          setSelectedGardenId(data[0].id);
         }
       }
     } catch (err) {
-      console.error("Failed to fetch gardens", err);
+      console.error("Failed to fetch user garden", err);
     }
-  }, [plant?.location_id]);
+  }, []);
 
   useEffect(() => {
-    fetchGardens();
-  }, [fetchGardens]);
+    fetchUserGarden();
+  }, [fetchUserGarden]);
 
   useEffect(() => {
     fetchPlants();
@@ -318,13 +318,6 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleGardenChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const gardenId = e.target.value;
-    setSelectedGardenId(gardenId);
-    // Reset location when garden changes
-    setFormData(prev => ({ ...prev, location_id: '', location: '' }));
-  };
-
   const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const locationId = e.target.value;
     const location = locations.find(l => l.id === locationId);
@@ -333,6 +326,58 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
       location_id: locationId,
       location: location?.name || ''
     }));
+  };
+
+  const handleLocationFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGardenId) {
+      setError('Please select a garden first');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const response = await fetch(`/api/gardens/${selectedGardenId}/locations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(locationFormData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create location');
+      }
+
+      // Reset form and refresh locations
+      setLocationFormData({
+        name: '',
+        description: '',
+      });
+      setIsLocationFormOpen(false);
+      
+      // Refresh locations for the selected garden
+      if (selectedGardenId) {
+        const locationResponse = await fetch(`/api/gardens/${selectedGardenId}/locations`);
+        if (locationResponse.ok) {
+          const data: GardenLocation[] = await locationResponse.json();
+          setLocations(data);
+        }
+      }
+    } catch (err) {
+      console.error('Error creating location:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create location');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setLocationFormData(prev => ({ ...prev, [name]: value }));
   };
 
   if (loading) {
@@ -365,13 +410,22 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
           <h2 className="text-2xl font-bold">🌱 Plants & Land Management</h2>
           <p className="text-gray-400 mt-1">Track your plants, crops, and land conditions</p>
         </div>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Entry</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setIsLocationFormOpen(true)}
+            className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <MapPin className="w-4 h-4" />
+            <span>Add Location</span>
+          </button>
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Plant</span>
+          </button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -542,6 +596,76 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
                 >
                   <Save className="w-4 h-4" />
                   <span>{saving ? (editingPlant ? 'Updating...' : 'Saving...') : (editingPlant ? 'Update Entry' : 'Save Entry')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Location Form Modal */}
+      {isLocationFormOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-xl p-6 w-full max-w-md border border-gray-800">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">Add New Location</h3>
+              <button
+                onClick={() => setIsLocationFormOpen(false)}
+                className="text-gray-400 hover:text-white"
+                disabled={saving}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleLocationFormSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Location Name *
+                </label>
+                <input
+                  type="text"
+                  value={locationFormData.name}
+                  onChange={handleLocationInputChange}
+                  name="name"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., North Garden Bed, Greenhouse Section A"
+                  required
+                  disabled={saving}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={locationFormData.description}
+                  onChange={handleLocationInputChange}
+                  name="description"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe this location..."
+                  rows={2}
+                  disabled={saving}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsLocationFormOpen(false)}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={saving || !selectedGardenId}
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Creating...' : 'Create Location'}</span>
                 </button>
               </div>
             </form>
