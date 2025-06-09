@@ -55,9 +55,21 @@ export interface AIRecommendation {
   is_active: boolean;
 }
 
+// Garden (top-level entity that contains multiple locations)
+export interface Garden {
+  id: string;
+  user_id: string; // Original creator/owner
+  name: string;
+  description?: string;
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface GardenLocation {
   id: string;
-  user_id: string;
+  garden_id: string; // References parent garden
+  user_id: string; // Creator of this location
   name: string;
   description?: string;
   notes?: string;
@@ -365,7 +377,7 @@ export interface SessionUser {
 // Multi-user garden system types
 export interface GardenMembership {
   id: string;
-  garden_location_id: string;
+  garden_id: string; // Now references garden, not garden_location
   user_id: string;
   role: 'owner' | 'admin' | 'member' | 'viewer';
   permissions: {
@@ -383,7 +395,7 @@ export interface GardenMembership {
 
 export interface GardenInvitation {
   id: string;
-  garden_location_id: string;
+  garden_id: string; // Now references garden, not garden_location
   invited_by_user_id: string;
   invited_user_email: string;
   invited_user_id?: string; // Set when user accepts invitation
@@ -397,7 +409,7 @@ export interface GardenInvitation {
 
 export interface GardenMembershipWithUser {
   id: string;
-  garden_location_id: string;
+  garden_id: string; // Now references garden, not garden_location
   user_id: string;
   username: string;
   email?: string;
@@ -416,7 +428,7 @@ export interface GardenMembershipWithUser {
 
 export interface GardenInvitationWithDetails {
   id: string;
-  garden_location_id: string;
+  garden_id: string; // Now references garden, not garden_location
   garden_name: string;
   invited_by_user_id: string;
   invited_by_username: string;
@@ -434,6 +446,19 @@ export interface GardenInvitationFormData {
   email: string;
   role: 'admin' | 'member' | 'viewer';
   message?: string;
+}
+
+export interface GardenFormData {
+  name: string;
+  description?: string;
+  notes?: string;
+}
+
+// Extended types for UI
+export interface GardenWithLocations extends Garden {
+  locations: GardenLocation[];
+  memberCount?: number;
+  userRole?: 'owner' | 'admin' | 'member' | 'viewer';
 }
 
 // Permission helpers

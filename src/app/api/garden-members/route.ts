@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { getGardenMemberships, getUserGardenMembership, getGardenLocationById } from '@/lib/database';
+import { getGardenMemberships, getUserGardenMembership, getGardenById } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,15 +12,15 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const gardenLocationId = searchParams.get('gardenLocationId');
+    const gardenId = searchParams.get('gardenId');
 
-    if (!gardenLocationId) {
-      return NextResponse.json({ error: 'Garden location ID is required' }, { status: 400 });
+    if (!gardenId) {
+      return NextResponse.json({ error: 'Garden ID is required' }, { status: 400 });
     }
 
     // Check if user has access to this garden
-    const userMembership = await getUserGardenMembership(gardenLocationId, session.user.id);
-    const garden = await getGardenLocationById(gardenLocationId, session.user.id);
+    const userMembership = await getUserGardenMembership(gardenId, session.user.id);
+    const garden = await getGardenById(gardenId, session.user.id);
     
     const hasAccess = garden?.user_id === session.user.id || userMembership;
     
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get garden members
-    const members = await getGardenMemberships(gardenLocationId);
+    const members = await getGardenMemberships(gardenId);
 
     return NextResponse.json({
       success: true,

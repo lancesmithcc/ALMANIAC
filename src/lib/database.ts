@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
-import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, GardenLocation, DailyWeatherTrend, User, GardenMembership, GardenInvitation, GardenMembershipWithUser, GardenInvitationWithDetails, DEFAULT_PERMISSIONS } from '@/types';
+import { Plant, WeatherRecord, ActivityLog, AIRecommendation, Location, Garden, GardenLocation, DailyWeatherTrend, User, GardenMembership, GardenInvitation, GardenMembershipWithUser, GardenInvitationWithDetails, DEFAULT_PERMISSIONS } from '@/types';
 import bcrypt from 'bcryptjs';
 
 // Database connection configuration
@@ -115,9 +115,24 @@ export const createTablesSQL = `
     INDEX idx_expires_at (expires_at)
   );
 
-  -- Garden locations table
+  -- Gardens table (top-level entity)
+  CREATE TABLE IF NOT EXISTS gardens (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_name (name)
+  );
+
+  -- Garden locations table (belongs to a garden)
   CREATE TABLE IF NOT EXISTS garden_locations (
     id VARCHAR(36) PRIMARY KEY,
+    garden_id VARCHAR(36) NOT NULL,
     user_id VARCHAR(36) NOT NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
@@ -129,16 +144,18 @@ export const createTablesSQL = `
     microclimate_notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME,
+    FOREIGN KEY (garden_id) REFERENCES gardens(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_garden_id (garden_id),
     INDEX idx_user_id (user_id),
     INDEX idx_name (name),
-    UNIQUE KEY unique_user_location (user_id, name)
+    UNIQUE KEY unique_garden_location (garden_id, name)
   );
 
   -- Garden memberships table (for multi-user gardens)
   CREATE TABLE IF NOT EXISTS garden_memberships (
     id VARCHAR(36) PRIMARY KEY,
-    garden_location_id VARCHAR(36) NOT NULL,
+    garden_id VARCHAR(36) NOT NULL,
     user_id VARCHAR(36) NOT NULL,
     role ENUM('owner', 'admin', 'member', 'viewer') NOT NULL DEFAULT 'member',
     can_edit_garden BOOLEAN DEFAULT FALSE,
@@ -150,10 +167,10 @@ export const createTablesSQL = `
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME,
-    FOREIGN KEY (garden_location_id) REFERENCES garden_locations(id) ON DELETE CASCADE,
+    FOREIGN KEY (garden_id) REFERENCES gardens(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_garden_user (garden_location_id, user_id),
-    INDEX idx_garden_location_id (garden_location_id),
+    UNIQUE KEY unique_garden_user (garden_id, user_id),
+    INDEX idx_garden_id (garden_id),
     INDEX idx_user_id (user_id),
     INDEX idx_role (role)
   );
@@ -161,7 +178,7 @@ export const createTablesSQL = `
   -- Garden invitations table
   CREATE TABLE IF NOT EXISTS garden_invitations (
     id VARCHAR(36) PRIMARY KEY,
-    garden_location_id VARCHAR(36) NOT NULL,
+    garden_id VARCHAR(36) NOT NULL,
     invited_by_user_id VARCHAR(36) NOT NULL,
     invited_user_email VARCHAR(255) NOT NULL,
     invited_user_id VARCHAR(36),
@@ -171,10 +188,10 @@ export const createTablesSQL = `
     expires_at DATETIME NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME,
-    FOREIGN KEY (garden_location_id) REFERENCES garden_locations(id) ON DELETE CASCADE,
+    FOREIGN KEY (garden_id) REFERENCES gardens(id) ON DELETE CASCADE,
     FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_garden_location_id (garden_location_id),
+    INDEX idx_garden_id (garden_id),
     INDEX idx_invited_user_email (invited_user_email),
     INDEX idx_invited_user_id (invited_user_id),
     INDEX idx_status (status),
@@ -536,18 +553,19 @@ export async function getWeatherTrends(days: 7 | 30 | 90 = 30): Promise<DailyWea
 }
 
 // Garden Location operations
-export async function createGardenLocation(location: Omit<GardenLocation, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+// Garden Functions
+export async function createGarden(garden: Omit<Garden, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
   const pool = getDbPool();
+  const id = uuidv4();
   const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
     
-    const id = uuidv4();
+    // Create the garden
     await connection.execute(
-      `INSERT INTO garden_locations (id, user_id, name, description, notes, size, soil_type, light_conditions, irrigation_type, microclimate_notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, location.user_id, location.name, location.description || null, location.notes || null, location.size || null, location.soil_type || null, location.light_conditions || null, location.irrigation_type || 'manual', location.microclimate_notes || null]
+      'INSERT INTO gardens (id, user_id, name, description, notes) VALUES (?, ?, ?, ?, ?)',
+      [id, garden.user_id, garden.name, garden.description || null, garden.notes || null]
     );
     
     // Create owner membership
@@ -556,12 +574,12 @@ export async function createGardenLocation(location: Omit<GardenLocation, 'id' |
     
     await connection.execute(
       `INSERT INTO garden_memberships (
-        id, garden_location_id, user_id, role, 
+        id, garden_id, user_id, role, 
         can_edit_garden, can_add_plants, can_edit_plants, can_delete_plants, 
         can_invite_users, can_manage_members, joined_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        membershipId, id, location.user_id, 'owner',
+        membershipId, id, garden.user_id, 'owner',
         ownerPermissions.can_edit_garden, ownerPermissions.can_add_plants, ownerPermissions.can_edit_plants,
         ownerPermissions.can_delete_plants, ownerPermissions.can_invite_users, ownerPermissions.can_manage_members
       ]
@@ -577,9 +595,102 @@ export async function createGardenLocation(location: Omit<GardenLocation, 'id' |
   }
 }
 
+export async function getGardens(userId: string): Promise<Garden[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT DISTINCT g.*
+    FROM gardens g
+    LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+    WHERE g.user_id = ? OR gm.user_id = ?
+    ORDER BY g.created_at DESC
+  `, [userId, userId]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    user_id: row.user_id,
+    name: row.name,
+    description: row.description,
+    notes: row.notes,
+    created_at: new Date(row.created_at),
+    updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
+  }));
+}
+
+export async function getGardenById(id: string, userId: string): Promise<Garden | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT g.*
+    FROM gardens g
+    LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+    WHERE g.id = ? AND (g.user_id = ? OR gm.user_id = ?)
+  `, [id, userId, userId]);
+  
+  const gardens = rows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (gardens.length > 0) {
+    const row = gardens[0];
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      name: row.name,
+      description: row.description,
+      notes: row.notes,
+      created_at: new Date(row.created_at),
+      updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
+    };
+  }
+  return null;
+}
+
+export async function updateGarden(id: string, userId: string, updates: Partial<Omit<Garden, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  const pool = getDbPool();
+  const fields = Object.keys(updates) as (keyof typeof updates)[];
+  const values = fields.map(field => updates[field]);
+  values.push(id);
+  values.push(userId);
+
+  const setClause = fields.map(field => `${field} = ?`).join(', ');
+  
+  await pool.execute(
+    `UPDATE gardens SET ${setClause}, updated_at = NOW() WHERE id = ? AND user_id = ?`,
+    values
+  );
+}
+
+export async function deleteGarden(id: string, userId: string): Promise<void> {
+  const pool = getDbPool();
+  await pool.execute('DELETE FROM gardens WHERE id = ? AND user_id = ?', [id, userId]);
+}
+
+// Garden Location Functions
+export async function createGardenLocation(location: Omit<GardenLocation, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+  const pool = getDbPool();
+  const id = uuidv4();
+  
+  await pool.execute(
+    `INSERT INTO garden_locations (
+      id, garden_id, user_id, name, description, notes, size, soil_type, 
+      light_conditions, irrigation_type, microclimate_notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, location.garden_id, location.user_id, location.name, location.description || null, 
+      location.notes || null, location.size || null, location.soil_type || null,
+      location.light_conditions || null, location.irrigation_type || 'manual', 
+      location.microclimate_notes || null
+    ]
+  );
+  
+  return id;
+}
+
 export async function getGardenLocations(userId: string): Promise<GardenLocation[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute('SELECT * FROM garden_locations WHERE user_id = ? ORDER BY name ASC', [userId]);
+  return rows as GardenLocation[];
+}
+
+export async function getGardenLocationsByGardenId(gardenId: string): Promise<GardenLocation[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute('SELECT * FROM garden_locations WHERE garden_id = ? ORDER BY name ASC', [gardenId]);
   return rows as GardenLocation[];
 }
 
@@ -618,12 +729,12 @@ export async function createGardenMembership(membership: Omit<GardenMembership, 
   
   await pool.execute(
     `INSERT INTO garden_memberships (
-      id, garden_location_id, user_id, role, 
+      id, garden_id, user_id, role, 
       can_edit_garden, can_add_plants, can_edit_plants, can_delete_plants, 
       can_invite_users, can_manage_members, joined_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      id, membership.garden_location_id, membership.user_id, membership.role,
+      id, membership.garden_id, membership.user_id, membership.role,
       permissions.can_edit_garden, permissions.can_add_plants, permissions.can_edit_plants, 
       permissions.can_delete_plants, permissions.can_invite_users, permissions.can_manage_members,
       membership.joined_at
@@ -632,24 +743,24 @@ export async function createGardenMembership(membership: Omit<GardenMembership, 
   return id;
 }
 
-export async function getGardenMemberships(gardenLocationId: string): Promise<GardenMembershipWithUser[]> {
+export async function getGardenMemberships(gardenId: string): Promise<GardenMembershipWithUser[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute(`
     SELECT 
-      gm.id, gm.garden_location_id, gm.user_id, gm.role,
+      gm.id, gm.garden_id, gm.user_id, gm.role,
       gm.can_edit_garden, gm.can_add_plants, gm.can_edit_plants, 
       gm.can_delete_plants, gm.can_invite_users, gm.can_manage_members,
       gm.joined_at, gm.created_at,
       u.username, u.email
     FROM garden_memberships gm
     JOIN users u ON gm.user_id = u.id
-    WHERE gm.garden_location_id = ?
+    WHERE gm.garden_id = ?
     ORDER BY gm.role = 'owner' DESC, gm.role = 'admin' DESC, gm.created_at ASC
-  `, [gardenLocationId]);
+  `, [gardenId]);
   
   return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
     id: row.id,
-    garden_location_id: row.garden_location_id,
+    garden_id: row.garden_id,
     user_id: row.user_id,
     username: row.username,
     email: row.email,
@@ -667,19 +778,19 @@ export async function getGardenMemberships(gardenLocationId: string): Promise<Ga
   }));
 }
 
-export async function getUserGardenMembership(gardenLocationId: string, userId: string): Promise<GardenMembership | null> {
+export async function getUserGardenMembership(gardenId: string, userId: string): Promise<GardenMembership | null> {
   const pool = getDbPool();
   const [rows] = await pool.execute(`
     SELECT * FROM garden_memberships 
-    WHERE garden_location_id = ? AND user_id = ?
-  `, [gardenLocationId, userId]);
+    WHERE garden_id = ? AND user_id = ?
+  `, [gardenId, userId]);
   
   const memberships = rows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   if (memberships.length > 0) {
     const row = memberships[0];
     return {
       id: row.id,
-      garden_location_id: row.garden_location_id,
+      garden_id: row.garden_id,
       user_id: row.user_id,
       role: row.role,
       permissions: {
@@ -728,11 +839,11 @@ export async function createGardenInvitation(invitation: Omit<GardenInvitation, 
   
   await pool.execute(
     `INSERT INTO garden_invitations (
-      id, garden_location_id, invited_by_user_id, invited_user_email, 
+      id, garden_id, invited_by_user_id, invited_user_email, 
       invited_user_id, role, status, message, expires_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      id, invitation.garden_location_id, invitation.invited_by_user_id, 
+      id, invitation.garden_id, invitation.invited_by_user_id, 
       invitation.invited_user_email, invitation.invited_user_id || null,
       invitation.role, invitation.status, invitation.message || null, invitation.expires_at
     ]
@@ -740,21 +851,21 @@ export async function createGardenInvitation(invitation: Omit<GardenInvitation, 
   return id;
 }
 
-export async function getGardenInvitations(gardenLocationId: string): Promise<GardenInvitationWithDetails[]> {
+export async function getGardenInvitations(gardenId: string): Promise<GardenInvitationWithDetails[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute(`
     SELECT 
-      gi.*, gl.name as garden_name, u.username as invited_by_username
+      gi.*, g.name as garden_name, u.username as invited_by_username
     FROM garden_invitations gi
-    JOIN garden_locations gl ON gi.garden_location_id = gl.id
+    JOIN gardens g ON gi.garden_id = g.id
     JOIN users u ON gi.invited_by_user_id = u.id
-    WHERE gi.garden_location_id = ?
+    WHERE gi.garden_id = ?
     ORDER BY gi.created_at DESC
-  `, [gardenLocationId]);
+  `, [gardenId]);
   
   return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
     id: row.id,
-    garden_location_id: row.garden_location_id,
+    garden_id: row.garden_id,
     garden_name: row.garden_name,
     invited_by_user_id: row.invited_by_user_id,
     invited_by_username: row.invited_by_username,
@@ -772,9 +883,9 @@ export async function getUserInvitations(userEmail: string): Promise<GardenInvit
   const pool = getDbPool();
   const [rows] = await pool.execute(`
     SELECT 
-      gi.*, gl.name as garden_name, u.username as invited_by_username
+      gi.*, g.name as garden_name, u.username as invited_by_username
     FROM garden_invitations gi
-    JOIN garden_locations gl ON gi.garden_location_id = gl.id
+    JOIN gardens g ON gi.garden_id = g.id
     JOIN users u ON gi.invited_by_user_id = u.id
     WHERE gi.invited_user_email = ? AND gi.status = 'pending' AND gi.expires_at > NOW()
     ORDER BY gi.created_at DESC
@@ -782,7 +893,7 @@ export async function getUserInvitations(userEmail: string): Promise<GardenInvit
   
   return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
     id: row.id,
-    garden_location_id: row.garden_location_id,
+    garden_id: row.garden_id,
     garden_name: row.garden_name,
     invited_by_user_id: row.invited_by_user_id,
     invited_by_username: row.invited_by_username,
@@ -822,12 +933,12 @@ export async function acceptGardenInvitation(invitationId: string, userId: strin
     
     await connection.execute(
       `INSERT INTO garden_memberships (
-        id, garden_location_id, user_id, role, 
+        id, garden_id, user_id, role, 
         can_edit_garden, can_add_plants, can_edit_plants, can_delete_plants, 
         can_invite_users, can_manage_members, joined_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        membershipId, invitation.garden_location_id, userId, invitation.role,
+        membershipId, invitation.garden_id, userId, invitation.role,
         permissions.can_edit_garden, permissions.can_add_plants, permissions.can_edit_plants,
         permissions.can_delete_plants, permissions.can_invite_users, permissions.can_manage_members
       ]
@@ -856,14 +967,14 @@ export async function declineGardenInvitation(invitationId: string): Promise<voi
   );
 }
 
-export async function getUserAccessibleGardens(userId: string): Promise<GardenLocation[]> {
+export async function getUserAccessibleGardens(userId: string): Promise<Garden[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute(`
-    SELECT DISTINCT gl.*
-    FROM garden_locations gl
-    LEFT JOIN garden_memberships gm ON gl.id = gm.garden_location_id
-    WHERE gl.user_id = ? OR gm.user_id = ?
-    ORDER BY gl.created_at DESC
+    SELECT DISTINCT g.*
+    FROM gardens g
+    LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+    WHERE g.user_id = ? OR gm.user_id = ?
+    ORDER BY g.created_at DESC
   `, [userId, userId]);
   
   return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -872,11 +983,6 @@ export async function getUserAccessibleGardens(userId: string): Promise<GardenLo
     name: row.name,
     description: row.description,
     notes: row.notes,
-    size: row.size,
-    soil_type: row.soil_type,
-    light_conditions: row.light_conditions,
-    irrigation_type: row.irrigation_type,
-    microclimate_notes: row.microclimate_notes,
     created_at: new Date(row.created_at),
     updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
   }));

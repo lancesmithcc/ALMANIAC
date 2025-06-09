@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { createGardenInvitation, getUserInvitations, getUserByUsername, getGardenLocationById, getUserGardenMembership } from '@/lib/database';
+import { createGardenInvitation, getUserInvitations, getUserByUsername, getGardenById, getUserGardenMembership } from '@/lib/database';
 import { z } from 'zod';
 
 const createInvitationSchema = z.object({
-  gardenLocationId: z.string().min(1, "Garden location ID is required"),
+  gardenId: z.string().min(1, "Garden ID is required"),
   email: z.string().email("Valid email is required"),
   role: z.enum(['admin', 'member', 'viewer']),
   message: z.string().optional(),
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { gardenLocationId, email, role, message } = validation.data;
+    const { gardenId, email, role, message } = validation.data;
 
     // Check if user has permission to invite others to this garden
-    const userMembership = await getUserGardenMembership(gardenLocationId, session.user.id);
-    const garden = await getGardenLocationById(gardenLocationId, session.user.id);
+    const userMembership = await getUserGardenMembership(gardenId, session.user.id);
+    const garden = await getGardenById(gardenId, session.user.id);
     
     // User must be owner of the garden OR have invite permissions
     const canInvite = garden?.user_id === session.user.id || userMembership?.permissions.can_invite_users;
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is already a member
     if (invitedUser) {
-      const existingMembership = await getUserGardenMembership(gardenLocationId, invitedUser.id);
+      const existingMembership = await getUserGardenMembership(gardenId, invitedUser.id);
       if (existingMembership) {
         return NextResponse.json({ error: 'User is already a member of this garden' }, { status: 409 });
       }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     const invitationId = await createGardenInvitation({
-      garden_location_id: gardenLocationId,
+      garden_id: gardenId,
       invited_by_user_id: session.user.id,
       invited_user_email: email,
       invited_user_id: invitedUser?.id,

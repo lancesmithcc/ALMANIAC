@@ -202,7 +202,7 @@
 ✅ **Image Optimization:** Replaced all `<img>` tags with Next.js `Image` components for better performance
 ✅ **Code Quality:** Fixed useCallback dependencies and removed unused imports
 
-## Multi-User Garden System
+## Multi-User Garden System - RESTRUCTURING
 - [x] Create garden membership database tables
 - [x] Create invitation system database tables  
 - [x] Add garden invitation API endpoints
@@ -211,9 +211,22 @@
 - [x] Add "Manage Members" button to garden locations
 - [x] Implement role-based permissions system (owner, admin, member, viewer)
 - [x] Create invitation acceptance/decline functionality
-- [ ] Update garden permissions and access control for plant operations
-- [ ] Add invitation email system (optional enhancement)
-- [ ] Update existing garden operations for multi-user access
+
+## Garden Hierarchy Restructure (Current Task)
+- [x] Create new `gardens` table as top-level entity
+- [x] Modify `garden_locations` to reference parent garden
+- [x] Update memberships to work at garden level (not location level)
+- [x] Update invitations to work at garden level
+- [x] Update database functions for new structure
+- [x] Create new garden APIs (CRUD operations)
+- [x] Create garden locations API within gardens
+- [x] Update garden-members API to use garden IDs
+- [x] Update garden-invitations API to use garden IDs
+- [x] Create basic GardensManager UI component
+- [ ] Create migration script for existing data
+- [ ] Update existing components to use new structure
+- [ ] Update garden member management to work with gardens
+- [ ] Test the new garden sharing system
 
 ## Next Steps for User
 1. **IMMEDIATE:** Commit and push the enhanced AI system
