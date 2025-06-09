@@ -28,6 +28,8 @@ export default function ShareGardenButton({ gardenId, gardenName }: ShareGardenB
     setSuccess('');
 
     try {
+      const defaultMessage = `${session?.user?.username || session?.user?.name} has invited you to collaborate on their garden ${gardenName}. This garden includes all locations and plants within it.`;
+      
       const response = await fetch('/api/garden-invitations', {
         method: 'POST',
         headers: {
@@ -37,7 +39,7 @@ export default function ShareGardenButton({ gardenId, gardenName }: ShareGardenB
           gardenId,
           email,
           role,
-          message: message || `${session?.user?.username || session?.user?.name} has invited you to collaborate on their garden "${gardenName}". This garden includes all locations and plants within it.`,
+          message: message || defaultMessage,
         }),
       });
 
@@ -99,7 +101,7 @@ export default function ShareGardenButton({ gardenId, gardenName }: ShareGardenB
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">Share "{gardenName}"</h3>
+              <h3 className="text-lg font-bold text-white">Share &ldquo;{gardenName}&rdquo;</h3>
               <button
                 onClick={() => setShowModal(false)}
                 className="text-gray-400 hover:text-white"
@@ -133,7 +135,7 @@ export default function ShareGardenButton({ gardenId, gardenName }: ShareGardenB
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                Anyone with this link can view your garden. They'll need to create an account to collaborate.
+                Anyone with this link can view your garden. They&apos;ll need to create an account to collaborate.
               </p>
             </div>
 

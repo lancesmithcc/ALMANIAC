@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { 
   Leaf, 
   MapPin, 
-  Calendar, 
   Heart, 
   Sprout, 
   Users,
@@ -36,13 +35,7 @@ export default function GardenViewPage() {
   const [error, setError] = useState<string | null>(null);
   const [requestingAccess, setRequestingAccess] = useState(false);
 
-  useEffect(() => {
-    if (gardenId) {
-      fetchGarden();
-    }
-  }, [gardenId]);
-
-  const fetchGarden = async () => {
+  const fetchGarden = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/gardens/${gardenId}/public`);
@@ -63,7 +56,13 @@ export default function GardenViewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gardenId]);
+
+  useEffect(() => {
+    if (gardenId) {
+      fetchGarden();
+    }
+  }, [gardenId, fetchGarden]);
 
   const requestAccess = async () => {
     if (!session?.user?.email) {
