@@ -19,7 +19,6 @@ import GardenInvitations from './GardenInvitations';
 const navItems = [
   { name: 'Overview', icon: AreaChart },
   { name: 'Plants & Land', icon: Leaf },
-  { name: 'Garden Locations', icon: MapPin },
   { name: 'Weather', icon: Cloud },
   { name: 'Analytics', icon: BarChart2 },
   { name: 'Insights', icon: Brain },
@@ -60,9 +59,7 @@ export default function Dashboard() {
           </div>
         );
       case 'Plants & Land':
-        return <PlantEntryForm />; 
-      case 'Garden Locations':
-        return <GardensManager />;
+        return <PlantEntryForm />;
       case 'Weather':
         return (
           <div className="space-y-6">
