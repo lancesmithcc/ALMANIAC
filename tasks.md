@@ -51,7 +51,8 @@
 - [x] **ENHANCED:** AI now provides permaculture and astrological plant readings
 - [x] **FIXED:** AI Insights now load reliably without 502 errors
 - [x] **NEW:** Temperature unit toggle (Celsius default, Fahrenheit option)
-- [ ] Implement User Account Management (Password Change)
+- [x] Implement User Account Management (Password Change)
+- [x] Create Settings page for username and password changes
 
 ## UI/UX Components
 - [x] Create dark theme configuration
@@ -64,7 +65,8 @@
 - [x] Create Login/Signup pages and forms
 - [x] Create AuthWrapper for protected routes
 - [x] **COMPLETED:** Moon Phase data now integrated into weather widget
-- [ ] Create Account Management page
+- [x] Create Account Management page
+- [x] Add Settings page to navigation
 - [ ] Update UI for authenticated/unauthenticated states
 
 ## Data Management
@@ -192,6 +194,10 @@
 ✅ **Consistent Branding:** Added logo to dashboard header, login page, signup page, and setup page
 ✅ **Enhanced Alerts System:** Created detailed alerts modal with actionable guidance and step-by-step instructions
 ✅ **Interactive Overview Cards:** Made alerts card clickable to show comprehensive alert details and solutions
+✅ **Settings Page Implementation:** Created comprehensive account settings page with username and password management
+✅ **Username Update API:** Secure API endpoint for changing usernames with validation and duplicate checking
+✅ **Password Update API:** Secure API endpoint for password changes with current password verification
+✅ **Settings Navigation:** Added functional Settings tab to dashboard navigation
 
 ## Next Steps for User
 1. **IMMEDIATE:** Commit and push the enhanced AI system

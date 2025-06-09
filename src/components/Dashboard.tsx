@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart, MapPin } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import WeatherWidget from './WeatherWidget';
 import PlantEntryForm from '@/components/PlantEntryForm';
@@ -22,7 +23,7 @@ const navItems = [
   { name: 'Insights', icon: Brain },
   { name: 'Community', icon: Users, comingSoon: true },
   { name: 'Calendar', icon: CalendarDays, comingSoon: true },
-  { name: 'Settings', icon: Settings, comingSoon: true },
+  { name: 'Settings', icon: Settings },
   { name: 'Help & Support', icon: HelpCircle, comingSoon: true },
 ];
 
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [currentDate, setCurrentDate] = useState('');
   const { data: session, status } = useSession();
+  const router = useRouter();
   const isLoadingSession = status === 'loading';
 
   useEffect(() => {
@@ -72,6 +74,9 @@ export default function Dashboard() {
         );
       case 'Insights':
         return <AIInsights />;
+      case 'Settings':
+        router.push('/settings');
+        return null;
       default:
         return <p>Welcome to Almaniac! Select a tab to get started.</p>;
     }
