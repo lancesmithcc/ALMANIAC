@@ -26,35 +26,8 @@ export async function POST() {
       
       console.log('Current garden_locations columns:', tableInfo);
       
-      // Drop the old table if it exists with wrong schema
-      await connection.execute('DROP TABLE IF EXISTS garden_locations');
-      
-      // Create the new garden_locations table with correct schema
-      await connection.execute(`
-        CREATE TABLE garden_locations (
-          id VARCHAR(36) PRIMARY KEY,
-          garden_id VARCHAR(36) NOT NULL,
-          user_id VARCHAR(36) NOT NULL,
-          name VARCHAR(200) NOT NULL,
-          description TEXT,
-          notes TEXT,
-          size VARCHAR(100),
-          soil_type VARCHAR(100),
-          light_conditions ENUM('full_sun', 'partial_sun', 'partial_shade', 'full_shade'),
-          irrigation_type ENUM('manual', 'drip', 'sprinkler', 'none') DEFAULT 'manual',
-          microclimate_notes TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME,
-          FOREIGN KEY (garden_id) REFERENCES gardens(id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-          INDEX idx_garden_id (garden_id),
-          INDEX idx_user_id (user_id),
-          INDEX idx_name (name),
-          UNIQUE KEY unique_garden_location (garden_id, name)
-        )
-      `);
-      
-      // Check if gardens table exists, create if not
+      // STEP 1: Create gardens table first (needed for foreign key)
+      console.log('Step 1: Creating gardens table...');
       await connection.execute(`
         CREATE TABLE IF NOT EXISTS gardens (
           id VARCHAR(36) PRIMARY KEY,
@@ -70,7 +43,8 @@ export async function POST() {
         )
       `);
       
-      // Check if garden_memberships table exists, create if not
+      // STEP 2: Create garden_memberships table
+      console.log('Step 2: Creating garden_memberships table...');
       await connection.execute(`
         CREATE TABLE IF NOT EXISTS garden_memberships (
           id VARCHAR(36) PRIMARY KEY,
@@ -95,15 +69,53 @@ export async function POST() {
         )
       `);
       
+      // STEP 3: Drop the old garden_locations table if it exists with wrong schema
+      console.log('Step 3: Dropping old garden_locations table...');
+      await connection.execute('DROP TABLE IF EXISTS garden_locations');
+      
+      // STEP 4: Create the new garden_locations table with correct schema
+      console.log('Step 4: Creating new garden_locations table...');
+      await connection.execute(`
+        CREATE TABLE garden_locations (
+          id VARCHAR(36) PRIMARY KEY,
+          garden_id VARCHAR(36) NOT NULL,
+          user_id VARCHAR(36) NOT NULL,
+          name VARCHAR(200) NOT NULL,
+          description TEXT,
+          notes TEXT,
+          size VARCHAR(100),
+          soil_type VARCHAR(100),
+          light_conditions ENUM('full_sun', 'partial_sun', 'partial_shade', 'full_shade'),
+          irrigation_type ENUM('manual', 'drip', 'sprinkler', 'none') DEFAULT 'manual',
+          microclimate_notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME,
+          FOREIGN KEY (garden_id) REFERENCES gardens(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          INDEX idx_garden_id (garden_id),
+          INDEX idx_user_id (user_id),
+          INDEX idx_name (name),
+          UNIQUE KEY unique_garden_location (garden_id, name)
+        )
+      `);
+      
       await connection.commit();
+      console.log('Schema fix completed successfully!');
       
       return NextResponse.json({ 
         success: true, 
         message: 'Garden schema fixed successfully',
-        originalColumns: tableInfo
+        originalColumns: tableInfo,
+        steps: [
+          'Created gardens table',
+          'Created garden_memberships table', 
+          'Dropped old garden_locations table',
+          'Created new garden_locations table with garden_id column'
+        ]
       });
       
     } catch (error) {
+      console.error('Schema fix step failed:', error);
       await connection.rollback();
       throw error;
     } finally {
@@ -112,9 +124,24 @@ export async function POST() {
     
   } catch (error) {
     console.error('Schema fix error:', error);
+    
+    // Extract more detailed error information
+    const errorDetails = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      // @ts-expect-error - MySQL specific error properties not in base Error type
+      code: error?.code || 'No error code',
+      // @ts-expect-error - MySQL specific error number property
+      errno: error?.errno || 'No errno',
+      // @ts-expect-error - MySQL specific error message property
+      sqlMessage: error?.sqlMessage || 'No SQL message',
+      // @ts-expect-error - MySQL specific SQL statement property
+      sql: error?.sql || 'No SQL statement'
+    };
+    
     return NextResponse.json({
       error: 'Failed to fix schema',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorDetails
     }, { status: 500 });
   }
 } 
