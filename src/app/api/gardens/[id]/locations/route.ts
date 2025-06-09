@@ -9,21 +9,31 @@ interface RouteParams {
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  let session;
+  let gardenId;
+  let data;
+  
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: gardenId } = await params;
+    const { id } = await params;
+    gardenId = id;
     
     // Check if user has permission to add locations
     const membership = await getUserGardenMembership(gardenId, session.user.id);
     if (!membership || !membership.permissions.can_edit_garden) {
+      console.log('Permission check failed:', {
+        membership,
+        gardenId,
+        userId: session.user.id
+      });
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const data: GardenLocationFormData = await request.json();
+    data = await request.json();
     
     const locationId = await createGardenLocation({
       garden_id: gardenId,
@@ -41,7 +51,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ id: locationId, message: 'Garden location created successfully' });
   } catch (error) {
     console.error('Error creating garden location:', error);
-    return NextResponse.json({ error: 'Failed to create garden location' }, { status: 500 });
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      gardenId: gardenId || 'undefined',
+      userId: session?.user?.id || 'undefined',
+      requestData: data || 'undefined'
+    });
+    return NextResponse.json({ 
+      error: 'Failed to create garden location',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

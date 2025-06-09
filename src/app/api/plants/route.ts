@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
   try {
     const body: PlantFormData = await request.json();
     
-    if (!body.plant_type || !body.planting_date || !body.location) {
+    if (!body.plant_type || !body.planting_date || (!body.location && !body.location_id)) {
       return NextResponse.json(
-        { error: 'Missing required fields: plant_type, planting_date, location' },
+        { error: 'Missing required fields: plant_type, planting_date, location_id' },
         { status: 400 }
       );
     }
