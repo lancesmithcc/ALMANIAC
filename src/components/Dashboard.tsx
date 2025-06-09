@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart, MapPin } from 'lucide-react';
+import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -13,7 +13,6 @@ import RecentEntries from './RecentEntries';
 import AIInsights from './AIInsights';
 import WeatherTrendsChart from './WeatherTrendsChart';
 import ThreeDayForecast from '@/components/ThreeDayForecast';
-import GardensManager from './GardensManager';
 import GardenInvitations from './GardenInvitations';
 
 const navItems = [
