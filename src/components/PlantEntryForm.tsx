@@ -452,26 +452,7 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
                   />
                 </div>
 
-                <div className="col-span-1">
-                  <label htmlFor="garden" className="block text-sm font-medium text-gray-300 mb-1">
-                    Garden *
-                  </label>
-                  <select
-                    id="garden"
-                    name="garden"
-                    value={selectedGardenId}
-                    onChange={handleGardenChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                    required
-                  >
-                    <option value="">Select a Garden</option>
-                    {gardens.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-span-1">
+                <div className="col-span-2">
                   <label htmlFor="location_id" className="block text-sm font-medium text-gray-300 mb-1">
                     Location *
                   </label>
