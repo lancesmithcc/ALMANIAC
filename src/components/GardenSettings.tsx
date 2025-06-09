@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Garden, GardenMembershipWithUser, GardenInvitationFormData, GardenInvitationWithDetails } from '@/types';
 import { Send, UserX, Trash2, Shield, Crown, User, Eye, Check, X, Mail } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
 
   const canManage = userRole === 'owner' || userRole === 'admin';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -56,18 +56,22 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
         }
       }
       
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [gardenId, session?.user?.id]);
 
   useEffect(() => {
     if (gardenId && session?.user?.id) {
       fetchData();
     }
-  }, [gardenId, session]);
+  }, [gardenId, session, fetchData]);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,8 +90,12 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
       setShowInviteModal(false);
       setInviteFormData({ email: '', role: 'member', message: '' });
       fetchData(); // Refresh data
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred on invite submit');
+      }
     }
   };
   
@@ -101,8 +109,12 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
       });
       if(!res.ok) throw new Error("Failed to update role");
       fetchData(); // Refresh data
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred while changing role');
+      }
     }
   };
 
@@ -113,8 +125,12 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
         const res = await fetch(`/api/garden-members/${membershipId}`, { method: 'DELETE' });
         if(!res.ok) throw new Error("Failed to remove member");
         fetchData(); // Refresh data
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred while removing member');
+        }
       }
     }
   };
@@ -123,19 +139,21 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
   if (error) return <div className="text-red-500">{error}</div>;
   if (!garden) return <div>Garden not found.</div>;
 
-  const RoleIcon = ({ role }: { role: string }) => {
-    const icons = {
+  type Role = 'owner' | 'admin' | 'member' | 'viewer';
+
+  const RoleIcon = ({ role }: { role: Role }) => {
+    const icons: Record<Role, React.ReactNode> = {
       owner: <Crown className="h-5 w-5 text-yellow-400" />,
       admin: <Shield className="h-5 w-5 text-blue-400" />,
       member: <User className="h-5 w-5 text-green-400" />,
       viewer: <Eye className="h-5 w-5 text-gray-400" />,
     };
-    return icons[role as keyof typeof icons] || null;
+    return icons[role] || null;
   };
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-white">Share Settings for "{garden.name}"</h1>
+      <h1 className="text-3xl font-bold text-white">Share Settings for &quot;{garden.name}&quot;</h1>
       
       {/* Members Section */}
       <div className="bg-gray-800 p-6 rounded-lg">
@@ -151,7 +169,7 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
           {members.map(member => (
             <li key={member.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-md">
               <div className="flex items-center gap-3">
-                <RoleIcon role={member.role} />
+                <RoleIcon role={member.role as Role} />
                 <div>
                   <p className="font-medium text-white">{member.username}</p>
                   <p className="text-sm text-gray-400">{member.email}</p>
@@ -160,7 +178,7 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
               <div className="flex items-center gap-2">
                 {canManage && member.role !== 'owner' ? (
                   <>
-                    <select value={member.role} onChange={(e) => handleRoleChange(member.id, e.target.value as any)} className="bg-gray-800 border-gray-600 rounded-md text-white text-sm p-1">
+                    <select value={member.role} onChange={(e) => handleRoleChange(member.id, e.target.value as 'admin' | 'member' | 'viewer')} className="bg-gray-800 border-gray-600 rounded-md text-white text-sm p-1">
                       <option value="admin">Admin</option>
                       <option value="member">Member</option>
                       <option value="viewer">Viewer</option>
@@ -187,7 +205,7 @@ export default function GardenSettings({ gardenId }: GardenSettingsProps) {
                    <Mail className="h-5 w-5 text-gray-400" />
                    <div>
                      <p className="font-medium text-white">{invite.invited_user_email}</p>
-                     <p className="text-sm text-gray-400">Invited as <span className="capitalize">{invite.role}</span></p>
+                     <p className="text-sm text-gray-400">Invited as <span className="capitalize">{invite.role}</span> by {invite.invited_by_username || 'a user'}</p>
                    </div>
                 </div>
                 {/* Add cancel invitation button here if needed */}

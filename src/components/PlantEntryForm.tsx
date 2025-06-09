@@ -1,20 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plant, GardenLocation, Garden } from '@/types';
 import { 
   Plus,
   X,
   Save,
   Edit,
-  Camera,
-  MapPin,
-  Leaf,
-  CheckCircle,
-  XCircle
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 interface PlantEntry {
   id?: string;
@@ -32,18 +25,14 @@ interface PlantEntry {
 
 interface PlantEntryFormProps {
   plant?: Plant;
-  onFormSubmit: () => void;
 }
 
-export default function PlantEntryForm({ plant, onFormSubmit }: PlantEntryFormProps) {
-  const { data: session } = useSession();
-  const router = useRouter();
+export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [entries, setEntries] = useState<PlantEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [editingPlant, setEditingPlant] = useState<PlantEntry | null>(null);
   const [gardens, setGardens] = useState<Garden[]>([]);
   const [locations, setLocations] = useState<GardenLocation[]>([]);
@@ -59,7 +48,7 @@ export default function PlantEntryForm({ plant, onFormSubmit }: PlantEntryFormPr
     stage: plant?.stage || 'seed'
   });
 
-  const fetchGardens = async () => {
+  const fetchGardens = useCallback(async () => {
     try {
       const response = await fetch('/api/gardens');
       if (response.ok) {
@@ -78,11 +67,11 @@ export default function PlantEntryForm({ plant, onFormSubmit }: PlantEntryFormPr
     } catch (err) {
       console.error("Failed to fetch gardens", err);
     }
-  };
+  }, [plant?.location_id]);
 
   useEffect(() => {
     fetchGardens();
-  }, [plant]);
+  }, [fetchGardens]);
 
   useEffect(() => {
     const fetchLocations = async () => {

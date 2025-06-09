@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import GardenSettings from '@/components/GardenSettings';
 
 export default function GardenSettingsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const params = useParams();
   const gardenId = Array.isArray(params.id) ? params.id[0] : params.id;
 
