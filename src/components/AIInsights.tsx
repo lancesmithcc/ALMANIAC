@@ -97,100 +97,101 @@ const AIInsights: React.FC = () => {
     fetchInsights();
   }, []);
 
-  // Helper function to get styling based on priority
-  const getPriorityStyles = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'border-red-500 bg-red-500/10 text-red-400';
-      case 'high': return 'border-orange-500 bg-orange-500/10 text-orange-400';
-      case 'medium': return 'border-yellow-500 bg-yellow-500/10 text-yellow-400';
-      case 'low':
-      default: return 'border-emerald-500 bg-emerald-500/10 text-emerald-400';
+
+
+  const renderContent = () => {
+    if (!analysisData?.analysis) return null;
+
+    const { recommendations, insights, alerts, moon_guidance } = analysisData.analysis;
+    const allContent = [];
+
+    // Add alerts first (highest priority)
+    if (alerts && alerts.length > 0) {
+      allContent.push({
+        type: 'alerts',
+        title: '⚠️ Urgent Alerts',
+        color: 'orange',
+        items: alerts.map(alert => alert.message)
+      });
     }
+
+    // Add high priority recommendations
+    const urgentRecs = recommendations?.filter(r => r.priority === 'urgent' || r.priority === 'high') || [];
+    if (urgentRecs.length > 0) {
+      allContent.push({
+        type: 'urgent_recommendations',
+        title: '🚨 Priority Actions',
+        color: 'red',
+        items: urgentRecs.map(rec => `${rec.description} (${rec.timing})`)
+      });
+    }
+
+    // Add moon guidance
+    if (moon_guidance && moon_guidance.length > 0) {
+      allContent.push({
+        type: 'moon_guidance',
+        title: '🌙 Lunar Calendar',
+        color: 'purple',
+        items: moon_guidance.slice(0, 3)
+      });
+    }
+
+    // Add growth trends
+    if (insights?.growth_trends && insights.growth_trends.length > 0) {
+      allContent.push({
+        type: 'growth_trends',
+        title: '📈 Garden Status',
+        color: 'blue',
+        items: insights.growth_trends.slice(0, 4)
+      });
+    }
+
+    // Add permaculture opportunities
+    if (insights?.permaculture_opportunities && insights.permaculture_opportunities.length > 0) {
+      allContent.push({
+        type: 'permaculture',
+        title: '🌿 Permaculture Tips',
+        color: 'green',
+        items: insights.permaculture_opportunities.slice(0, 3)
+      });
+    }
+
+    // Add medium/low priority recommendations
+    const normalRecs = recommendations?.filter(r => r.priority === 'medium' || r.priority === 'low') || [];
+    if (normalRecs.length > 0) {
+      allContent.push({
+        type: 'recommendations',
+        title: '💡 Suggestions',
+        color: 'emerald',
+        items: normalRecs.slice(0, 4).map(rec => `${rec.description} (${rec.timing})`)
+      });
+    }
+
+    // Add weather impacts
+    if (insights?.weather_impacts && insights.weather_impacts.length > 0) {
+      allContent.push({
+        type: 'weather',
+        title: '🌤️ Weather Insights',
+        color: 'cyan',
+        items: insights.weather_impacts.slice(0, 3)
+      });
+    }
+
+    return allContent;
   };
 
-  const renderRecommendations = () => {
-    if (!analysisData?.analysis?.recommendations) return null;
-    
-    return (
-      <div className="space-y-4">
-        <h4 className="text-lg font-semibold text-emerald-400 mb-3">🌱 Recommendations</h4>
-        <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-          {analysisData.analysis.recommendations.map((rec, index) => (
-            <div 
-              key={index} 
-              className={`p-3 border rounded-lg ${getPriorityStyles(rec.priority)}`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <p className="font-medium text-sm capitalize">
-                  {rec.type.replace(/_/g, ' ')}
-                </p>
-                <span className="text-xs px-2 py-1 rounded-full bg-gray-700 text-gray-300">
-                  {rec.priority}
-                </span>
-              </div>
-              <p className="text-sm mb-2">{rec.description}</p>
-              <p className="text-xs text-gray-400 mb-1">{rec.reasoning}</p>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-gray-500">Timing: {rec.timing}</span>
-                <span className="text-gray-500">Confidence: {rec.confidence}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderInsights = () => {
-    if (!analysisData?.analysis?.insights) return null;
-    
-    const insights = analysisData.analysis.insights;
-    
-    return (
-      <div className="space-y-4">
-        <h4 className="text-lg font-semibold text-blue-400 mb-3">🔍 Garden Insights</h4>
-        <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-          {insights.growth_trends.length > 0 && (
-            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <h5 className="font-medium text-blue-400 mb-2">Growth Trends</h5>
-              <ul className="text-sm space-y-1">
-                {insights.growth_trends.map((trend, index) => (
-                  <li key={index} className="text-gray-300">• {trend}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {insights.permaculture_opportunities.length > 0 && (
-            <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-              <h5 className="font-medium text-green-400 mb-2">Permaculture Opportunities</h5>
-              <ul className="text-sm space-y-1">
-                {insights.permaculture_opportunities.slice(0, 3).map((opp, index) => (
-                  <li key={index} className="text-gray-300">• {opp}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderMoonGuidance = () => {
-    if (!analysisData?.analysis?.moon_guidance) return null;
-    
-    return (
-      <div className="space-y-3">
-        <h4 className="text-lg font-semibold text-purple-400 mb-3">🌙 Lunar Guidance</h4>
-        <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg max-h-32 overflow-y-auto">
-          <ul className="text-sm space-y-1">
-            {analysisData.analysis.moon_guidance.slice(0, 4).map((guidance, index) => (
-              <li key={index} className="text-gray-300">• {guidance}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    );
+  const getColorClasses = (color: string) => {
+    switch (color) {
+      case 'red': return 'bg-red-500/10 border-red-500/30 text-red-400';
+      case 'orange': return 'bg-orange-500/10 border-orange-500/30 text-orange-400';
+      case 'yellow': return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+      case 'emerald': return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+      case 'green': return 'bg-green-500/10 border-green-500/30 text-green-400';
+      case 'blue': return 'bg-blue-500/10 border-blue-500/30 text-blue-400';
+      case 'cyan': return 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400';
+      case 'purple': return 'bg-purple-500/10 border-purple-500/30 text-purple-400';
+      default: return 'bg-gray-500/10 border-gray-500/30 text-gray-400';
+    }
   };
 
   return (
@@ -232,36 +233,43 @@ const AIInsights: React.FC = () => {
       )}
 
       {!error && analysisData?.analysis && (
-        <div className="space-y-6 overflow-y-auto flex-grow pr-1">
+        <div className="space-y-4 flex-grow">
           {/* Metadata */}
           {analysisData.metadata && (
-            <div className="text-xs text-gray-500 p-2 bg-gray-700/30 rounded border">
-              <div className="flex justify-between">
-                <span>Plants: {analysisData.metadata.plants_analyzed}</span>
-                <span>AI Enhanced: {analysisData.metadata.ai_enhanced ? '✅' : '🔄'}</span>
+            <div className="text-xs text-gray-500 p-3 bg-gray-700/30 rounded-lg border border-gray-600/30">
+              <div className="flex justify-between items-center">
+                <span>🌱 Plants: {analysisData.metadata.plants_analyzed}</span>
+                <span>🤖 AI Enhanced: {analysisData.metadata.ai_enhanced ? '✅' : '🔄'}</span>
               </div>
-              <div className="flex justify-between mt-1">
-                <span>Weather: {analysisData.metadata.weather_records > 0 ? '✅' : '❌'}</span>
-                <span>Moon Phase: {analysisData.metadata.moon_phase_included ? '🌙' : '❌'}</span>
+              <div className="flex justify-between items-center mt-1">
+                <span>🌤️ Weather: {analysisData.metadata.weather_records > 0 ? '✅' : '❌'}</span>
+                <span>🌙 Moon Phase: {analysisData.metadata.moon_phase_included ? '✅' : '❌'}</span>
               </div>
             </div>
           )}
 
-          {/* Alerts */}
-          {analysisData.analysis.alerts && analysisData.analysis.alerts.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-lg font-semibold text-orange-400">⚠️ Alerts</h4>
-              {analysisData.analysis.alerts.map((alert, index) => (
-                <div key={index} className="p-2 bg-orange-500/10 border border-orange-500/30 rounded text-sm">
-                  {alert.message}
-                </div>
-              ))}
+          {/* Sequential Content */}
+          {renderContent()?.map((section, index) => (
+            <div key={index} className={`p-4 border rounded-lg ${getColorClasses(section.color)}`}>
+              <h4 className="font-semibold mb-3">{section.title}</h4>
+              <div className="space-y-2">
+                {section.items.map((item, itemIndex) => (
+                  <div key={itemIndex} className="text-sm text-gray-200 leading-relaxed">
+                    • {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* No content message */}
+          {(renderContent()?.length || 0) === 0 && (
+            <div className="text-center py-8 text-gray-400">
+              <Brain className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p>No specific insights available yet.</p>
+              <p className="text-xs text-gray-500 mt-1">Add some plants to get personalized recommendations!</p>
             </div>
           )}
-
-          {renderRecommendations()}
-          {renderInsights()}
-          {renderMoonGuidance()}
         </div>
       )}
       

@@ -113,6 +113,12 @@
 🌟 **MAJOR ENHANCEMENT COMPLETE:** AI system now includes comprehensive permaculture practices, moon phase guidance, and astrological plant readings!
 
 ## Recently Completed
+✅ **AI Insights UX Overhaul:** Removed all scroll bars, redesigned for sequential content display
+✅ **Hyper-Specific Recommendations:** AI now provides exact spacing, timing, and action steps
+✅ **Detailed Companion Planting:** Specific instructions like "Plant basil 12-18 inches from tomato base"
+✅ **Weather Action Plans:** Step-by-step protocols for heat waves, frost, storms, and humidity
+✅ **Lunar Gardening Details:** Specific plant types and actions for each moon phase and zodiac sign
+✅ **Location-Based Advice:** AI considers garden locations for proximity-based companion planting
 ✅ **Dashboard Data Fixes:** Fixed analytics API to show user-specific data instead of all users
 ✅ **Real Plant Counts:** Total plants and health scores now accurate for logged-in user
 ✅ **Enhanced Harvest Estimates:** Next harvest calculated from actual plant stages

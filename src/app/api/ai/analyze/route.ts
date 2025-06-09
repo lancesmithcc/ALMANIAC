@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         permaculture_principle: 'Observe and interact'
       });
 
-      // Generate location-specific companion planting recommendations
+      // Generate highly specific location-based companion planting recommendations
       const missingCompanions: string[] = [];
       const locationSpecificRecommendations: string[] = [];
       
@@ -148,24 +148,54 @@ export async function POST(request: NextRequest) {
 
         if (locationMissingCompanions.length > 0) {
           const uniqueLocationCompanions = [...new Set(locationMissingCompanions)];
+          const topCompanions = uniqueLocationCompanions.slice(0, 3);
+          
+          // Create specific planting instructions
+          const plantingInstructions = topCompanions.map(companion => {
+            if (companion === 'basil') return 'Plant basil 12 inches from tomatoes for pest control';
+            if (companion === 'marigold') return 'Sow marigold seeds around perimeter for natural pest deterrent';
+            if (companion === 'chives') return 'Plant chives in corners to repel aphids and improve flavor';
+            if (companion === 'nasturtium') return 'Plant nasturtium as living mulch to attract beneficial insects';
+            if (companion === 'radish') return 'Interplant radish between rows to break up soil and deter pests';
+            return `Add ${companion} nearby for companion benefits`;
+          });
+          
           locationSpecificRecommendations.push(
-            `${location}: add ${uniqueLocationCompanions.slice(0, 3).join(', ')} to complement your ${locationPlantTypes.join(', ')}`
+            `${location}: ${plantingInstructions.join(', ')}`
           );
           missingCompanions.push(...uniqueLocationCompanions);
         }
       });
 
-      // Also check for overall garden companion opportunities
+      // Generate specific companion planting with exact spacing and timing
       plantTypes.forEach(plantType => {
         const companions = companionPlants[plantType] || [];
         const missingForThisPlant = companions.filter(companion => 
           !plantTypes.includes(companion)
         );
-        missingCompanions.push(...missingForThisPlant);
         
         if (missingForThisPlant.length > 0) {
+          const specificInstructions = missingForThisPlant.slice(0, 2).map(companion => {
+            if (plantType === 'tomato' && companion === 'basil') {
+              return 'Plant basil 12-18 inches from tomato base, harvest regularly to encourage growth';
+            }
+            if (plantType === 'tomato' && companion === 'marigold') {
+              return 'Sow marigold seeds 6 inches from tomato plants in early spring';
+            }
+            if (plantType === 'lettuce' && companion === 'chives') {
+              return 'Plant chive bulbs 4 inches from lettuce rows, harvest outer leaves regularly';
+            }
+            if (plantType === 'carrot' && companion === 'chives') {
+              return 'Interplant chives every 6 inches along carrot rows to repel carrot fly';
+            }
+            if (plantType === 'cucumber' && companion === 'radish') {
+              return 'Plant radish seeds 2 inches apart around cucumber hills, harvest in 30 days';
+            }
+            return `Plant ${companion} near ${plantType} for mutual benefits`;
+          });
+          
           companionRecommendations.push(
-            `For your ${plantType}: add ${missingForThisPlant.slice(0, 3).join(', ')}`
+            `${plantType.charAt(0).toUpperCase() + plantType.slice(1)}: ${specificInstructions.join(', ')}`
           );
         }
       });
@@ -174,21 +204,20 @@ export async function POST(request: NextRequest) {
         plantRecommendations.push({
           type: 'location_companion_planting',
           priority: 'high' as const,
-          description: `Location-specific companion planting opportunities identified`,
-          reasoning: `${locationSpecificRecommendations.slice(0, 2).join('. ')}. Planting companions in the same location maximizes benefits.`,
+          description: `Specific companion planting plan for your garden locations`,
+          reasoning: `${locationSpecificRecommendations.slice(0, 2).join('. ')}. These specific placements maximize companion benefits through proximity.`,
           confidence: 95,
-          timing: 'Plant during next growing season',
+          timing: 'Plant companions within 2 weeks of main crops',
           permaculture_principle: 'Integrate rather than segregate'
         });
       } else if (companionRecommendations.length > 0) {
-        const uniqueCompanions = [...new Set(missingCompanions)];
         plantRecommendations.push({
           type: 'companion_planting',
           priority: 'high' as const,
-          description: `Add companion plants to boost your garden: ${uniqueCompanions.slice(0, 5).join(', ')}`,
-          reasoning: `Companion plants provide natural pest control, improved soil health, and increased yields. ${companionRecommendations.slice(0, 2).join('. ')}.`,
+          description: `Detailed companion planting instructions for your crops`,
+          reasoning: `${companionRecommendations.slice(0, 2).join('. ')}. Follow specific spacing for optimal companion benefits.`,
           confidence: 90,
-          timing: 'Plant during next growing season',
+          timing: 'Plant companions during main growing season',
           permaculture_principle: 'Integrate rather than segregate'
         });
       }
@@ -222,7 +251,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate weather-based recommendations
+    // Generate specific weather-based action recommendations
     const weatherRecommendations = [];
     if (weatherData) {
       const temp = weatherData.temperature;
@@ -230,48 +259,95 @@ export async function POST(request: NextRequest) {
       const condition = weatherData.condition?.toLowerCase() || '';
 
       if (temp > 30) {
+        const heatActions = [
+          'Install 30-50% shade cloth over sensitive plants like lettuce and spinach',
+          'Water deeply at 6 AM and 7 PM to avoid evaporation',
+          'Apply 2-3 inch mulch layer around plant bases to retain moisture',
+          'Move container plants to morning sun/afternoon shade locations'
+        ];
         weatherRecommendations.push({
           type: 'heat_protection',
           priority: 'high' as const,
-          description: `High temperature (${temp}°C) - provide shade and increase watering frequency`,
-          reasoning: 'Extreme heat can stress plants and increase water needs significantly.',
+          description: `Heat wave protocol for ${temp}°C: ${heatActions.slice(0, 2).join(', ')}`,
+          reasoning: `Extreme heat above 30°C can cause permanent plant stress. ${heatActions.slice(2, 4).join(', ')}.`,
           confidence: 95,
-          timing: 'Immediate - during hot weather',
+          timing: 'Implement by 6 AM tomorrow',
           permaculture_principle: 'Care for the earth'
         });
       } else if (temp < 5) {
+        const frostActions = [
+          'Cover tender plants with frost cloth or old bedsheets before sunset',
+          'Water soil around plants (wet soil retains heat better than dry)',
+          'Move potted plants against south-facing walls or into garage',
+          'Harvest any remaining tomatoes, peppers, and basil immediately'
+        ];
         weatherRecommendations.push({
           type: 'frost_protection',
           priority: 'urgent' as const,
-          description: `Low temperature (${temp}°C) - protect sensitive plants from frost`,
-          reasoning: 'Frost can damage or kill tender plants, especially young seedlings.',
+          description: `Frost alert at ${temp}°C: ${frostActions.slice(0, 2).join(', ')}`,
+          reasoning: `Frost damage occurs when plant cells freeze. ${frostActions.slice(2, 4).join(', ')}.`,
           confidence: 95,
-          timing: 'Immediate - before nightfall',
+          timing: 'Complete all actions before sunset today',
           permaculture_principle: 'Care for the earth'
         });
       }
 
       if (humidity > 80) {
+        const humidityActions = [
+          'Space plants wider apart to improve air circulation',
+          'Remove lower leaves touching soil to prevent fungal spread',
+          'Apply neem oil spray early morning as preventive treatment',
+          'Check daily for white powdery spots (powdery mildew) or dark spots (blight)'
+        ];
         weatherRecommendations.push({
           type: 'disease_prevention',
           priority: 'medium' as const,
-          description: `High humidity (${humidity}%) - improve air circulation and watch for fungal diseases`,
-          reasoning: 'High humidity creates ideal conditions for fungal diseases and pest problems.',
+          description: `High humidity (${humidity}%) management: ${humidityActions.slice(0, 2).join(', ')}`,
+          reasoning: `Humidity above 80% creates fungal disease conditions. ${humidityActions.slice(2, 4).join(', ')}.`,
           confidence: 85,
-          timing: 'Monitor daily during humid periods',
+          timing: 'Start monitoring immediately, treat at first signs',
           permaculture_principle: 'Observe and interact'
         });
       }
 
       if (condition.includes('rain') || condition.includes('storm')) {
+        const stormActions = [
+          'Stake tall plants like tomatoes and peppers with 6-foot stakes',
+          'Harvest any ripe fruits before storm to prevent loss',
+          'Cover delicate seedlings with plastic cloches or milk jugs',
+          'Clear drainage areas to prevent waterlogging around roots'
+        ];
         weatherRecommendations.push({
           type: 'storm_preparation',
           priority: 'high' as const,
-          description: 'Stormy weather expected - secure tall plants and protect delicate seedlings',
-          reasoning: 'Strong winds and heavy rain can damage plants and disrupt garden structures.',
+          description: `Storm preparation checklist: ${stormActions.slice(0, 2).join(', ')}`,
+          reasoning: `Wind and heavy rain can destroy months of growth. ${stormActions.slice(2, 4).join(', ')}.`,
           confidence: 90,
-          timing: 'Before storm arrives',
+          timing: 'Complete within 2 hours before storm arrival',
           permaculture_principle: 'Care for the earth'
+        });
+      }
+
+      // Add specific watering recommendations based on current conditions
+      if (temp > 25 && humidity < 50) {
+        weatherRecommendations.push({
+          type: 'watering_schedule',
+          priority: 'medium' as const,
+          description: `Hot, dry conditions: Water deeply every other day at soil level, avoid wetting leaves`,
+          reasoning: 'Hot, dry air increases plant water needs while wet leaves in heat can cause leaf burn.',
+          confidence: 90,
+          timing: 'Water between 6-8 AM or after 6 PM',
+          permaculture_principle: 'Catch and store energy'
+        });
+      } else if (temp < 20 && humidity > 70) {
+        weatherRecommendations.push({
+          type: 'watering_schedule',
+          priority: 'low' as const,
+          description: `Cool, humid conditions: Reduce watering frequency, check soil moisture with finger test`,
+          reasoning: 'Cool, humid conditions slow evaporation and can lead to overwatering and root rot.',
+          confidence: 85,
+          timing: 'Check soil daily, water only when top 2 inches are dry',
+          permaculture_principle: 'Observe and interact'
         });
       }
     }
@@ -333,52 +409,108 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate moon phase recommendations
+    // Generate specific lunar gardening recommendations
     const moonRecommendations = [];
     if (moonData) {
       const moonPhase = moonData.moon_phase?.phase_name?.toLowerCase() || '';
       const illumination = moonData.moon_phase?.illumination || 0;
+      const zodiacSign = moonData.astrological?.zodiac_sign || '';
 
       if (moonPhase.includes('new')) {
+        const newMoonActions = [
+          'Plant root vegetables: carrots, radishes, onions, garlic',
+          'Start seeds indoors for transplanting: tomatoes, peppers, herbs',
+          'Begin composting projects and soil preparation',
+          'Set intentions for garden goals and plan new garden areas'
+        ];
         moonRecommendations.push({
           type: 'lunar_planting',
           priority: 'medium' as const,
-          description: 'New moon phase - ideal time for planting seeds and starting new projects',
-          reasoning: 'New moon energy supports new beginnings and root development.',
+          description: `New moon in ${zodiacSign}: ${newMoonActions.slice(0, 2).join(', ')}`,
+          reasoning: `New moon energy draws growth downward into roots. ${newMoonActions.slice(2, 4).join(', ')}.`,
           confidence: 80,
-          timing: 'During new moon period (next 3 days)',
+          timing: 'Best results within 3 days of new moon',
           permaculture_principle: 'Observe and interact'
         });
       } else if (moonPhase.includes('full')) {
+        const fullMoonActions = [
+          'Harvest herbs at peak potency for drying and preserving',
+          'Collect seeds from mature plants for next season',
+          'Transplant established seedlings to permanent locations',
+          'Apply liquid fertilizers and compost tea for maximum absorption'
+        ];
         moonRecommendations.push({
           type: 'lunar_harvesting',
           priority: 'medium' as const,
-          description: 'Full moon phase - optimal time for harvesting and preserving',
-          reasoning: 'Full moon energy enhances plant vitality and preservation quality.',
+          description: `Full moon in ${zodiacSign}: ${fullMoonActions.slice(0, 2).join(', ')}`,
+          reasoning: `Full moon energy concentrates in leaves and fruits. ${fullMoonActions.slice(2, 4).join(', ')}.`,
           confidence: 80,
-          timing: 'During full moon period (next 3 days)',
+          timing: 'Optimal window: 2 days before to 2 days after full moon',
           permaculture_principle: 'Obtain a yield'
         });
       } else if (illumination > 50) {
+        const waxingActions = [
+          'Plant leafy greens: lettuce, spinach, kale, chard',
+          'Transplant seedlings and young plants',
+          'Apply organic fertilizers to support leaf growth',
+          'Prune for shape and encourage bushy growth'
+        ];
         moonRecommendations.push({
           type: 'lunar_growth',
           priority: 'low' as const,
-          description: 'Waxing moon phase - focus on above-ground growth and leaf development',
-          reasoning: 'Increasing moon energy supports upward growth and leaf production.',
+          description: `Waxing moon (${Math.round(illumination)}% full): ${waxingActions.slice(0, 2).join(', ')}`,
+          reasoning: `Increasing lunar energy pulls growth upward into leaves and stems. ${waxingActions.slice(2, 4).join(', ')}.`,
           confidence: 75,
-          timing: 'During waxing moon period',
+          timing: 'Continue until full moon for best results',
           permaculture_principle: 'Observe and interact'
         });
       } else {
+        const waningActions = [
+          'Plant root crops and bulbs: potatoes, turnips, beets',
+          'Prune dead or diseased branches for plant health',
+          'Work compost into soil and add organic matter',
+          'Divide perennial plants and root cuttings'
+        ];
         moonRecommendations.push({
           type: 'lunar_roots',
           priority: 'low' as const,
-          description: 'Waning moon phase - ideal for root crops, pruning, and soil work',
-          reasoning: 'Decreasing moon energy supports root development and soil activities.',
+          description: `Waning moon (${Math.round(illumination)}% full): ${waningActions.slice(0, 2).join(', ')}`,
+          reasoning: `Decreasing lunar energy focuses growth into roots and underground parts. ${waningActions.slice(2, 4).join(', ')}.`,
           confidence: 75,
-          timing: 'During waning moon period',
+          timing: 'Continue until new moon for strongest root development',
           permaculture_principle: 'Care for the earth'
         });
+      }
+
+      // Add zodiac-specific recommendations if available
+      if (zodiacSign) {
+        const zodiacActions: Record<string, string> = {
+          'aries': 'Fire sign energy: ideal for quick-growing crops like radishes and lettuce',
+          'taurus': 'Earth sign energy: perfect for root vegetables and establishing perennials',
+          'gemini': 'Air sign energy: great for herbs, flowers, and plants grown for leaves',
+          'cancer': 'Water sign energy: excellent for all planting, especially leafy greens',
+          'leo': 'Fire sign energy: focus on fruit trees and plants grown for their seeds',
+          'virgo': 'Earth sign energy: ideal for root crops and soil improvement work',
+          'libra': 'Air sign energy: perfect for flowers, herbs, and ornamental plants',
+          'scorpio': 'Water sign energy: excellent for all types of planting and transplanting',
+          'sagittarius': 'Fire sign energy: good for fruit trees and plants grown for seeds',
+          'capricorn': 'Earth sign energy: ideal for root vegetables and tree planting',
+          'aquarius': 'Air sign energy: focus on unusual varieties and experimental plantings',
+          'pisces': 'Water sign energy: excellent for all planting, especially water-loving plants'
+        };
+
+        const zodiacAction = zodiacActions[zodiacSign.toLowerCase()];
+        if (zodiacAction) {
+          moonRecommendations.push({
+            type: 'zodiac_timing',
+            priority: 'low' as const,
+            description: `Moon in ${zodiacSign}: ${zodiacAction}`,
+            reasoning: 'Astrological traditions suggest different zodiac signs favor different types of garden activities.',
+            confidence: 70,
+            timing: 'While moon remains in this zodiac sign',
+            permaculture_principle: 'Observe and interact'
+          });
+        }
       }
     }
 
