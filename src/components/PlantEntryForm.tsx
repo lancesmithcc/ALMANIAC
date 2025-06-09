@@ -461,27 +461,33 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
         </p>
         <button
           onClick={async () => {
-            console.log('Testing garden fetch...');
+            console.log('Testing garden debug...');
             try {
-              const response = await fetch('/api/gardens');
-              console.log('Gardens response status:', response.status);
+              const response = await fetch('/api/debug-garden');
+              console.log('Debug response status:', response.status);
               if (response.ok) {
                 const data = await response.json();
-                console.log('Gardens data:', JSON.stringify(data, null, 2));
+                console.log('Debug data:', JSON.stringify(data, null, 2));
                 setError(null);
+                
+                // Set garden ID if found
+                if (data.gardens && data.gardens.length > 0) {
+                  setSelectedGardenId(data.gardens[0].id);
+                  console.log('Set garden ID to:', data.gardens[0].id);
+                }
               } else {
                 const errorData = await response.json();
-                console.log('Gardens error:', JSON.stringify(errorData, null, 2));
-                setError(`Garden fetch failed: ${errorData.error || response.status}`);
+                console.log('Debug error:', JSON.stringify(errorData, null, 2));
+                setError(`Debug failed: ${errorData.error || response.status}`);
               }
             } catch (err) {
-              console.error('Garden fetch error:', err);
-              setError(`Garden fetch error: ${err}`);
+              console.error('Debug error:', err);
+              setError(`Debug error: ${err}`);
             }
           }}
           className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline"
         >
-          Test Garden Fetch
+          Test Garden Debug
         </button>
       </div>
 
