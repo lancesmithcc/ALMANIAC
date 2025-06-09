@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, User, Lock, Save, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -149,10 +150,11 @@ export default function SettingsPage() {
               <h1 className="text-xl font-semibold text-white">Account Settings</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <img 
+              <Image 
                 src="/almaniaclogo.svg" 
                 alt="Almaniac Logo" 
-                className="h-8 w-8" 
+                width={32}
+                height={32}
               />
               <span className="text-gray-300">Hi, {session.user?.username}</span>
             </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface DatabaseResult {
   success: boolean;
@@ -95,10 +96,12 @@ export default function SetupPage() {
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-8">
-          <img 
+          <Image 
             src="/almaniaclogo.svg" 
             alt="Almaniac Logo" 
-            className="h-12 w-12 mr-4" 
+            width={48}
+            height={48}
+            className="mr-4" 
           />
           <h1 className="text-4xl font-bold text-green-400">🛠️ Almaniac Database Setup</h1>
         </div>

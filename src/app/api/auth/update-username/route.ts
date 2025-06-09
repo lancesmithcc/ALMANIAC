@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { getUserByUsername, getUserById } from '@/lib/database';
+import { getUserByUsername } from '@/lib/database';
 import { z } from 'zod';
 import mysql from 'mysql2/promise';
 

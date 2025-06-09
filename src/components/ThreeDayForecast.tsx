@@ -24,35 +24,17 @@ const ThreeDayForecast: React.FC<ThreeDayForecastProps> = ({ expanded = false })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchForecast = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch('/api/weather/forecast');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch forecast');
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setForecast(data.forecast);
-      }
-    } catch (err) {
-      console.error('Error fetching forecast:', err);
-      setError('Failed to load forecast');
-      // Fallback to mock data for now
-      setForecast(generateMockForecast());
-    } finally {
-      setLoading(false);
+  const getWeatherDescription = (condition: string): string => {
+    switch (condition) {
+      case 'sunny': return 'Clear and sunny';
+      case 'partly-cloudy': return 'Partly cloudy';
+      case 'cloudy': return 'Overcast';
+      case 'rainy': return 'Rain expected';
+      default: return 'Variable conditions';
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchForecast();
-  }, [fetchForecast]);
-
-  const generateMockForecast = (): WeatherForecast[] => {
+  const generateMockForecast = useCallback((): WeatherForecast[] => {
     const today = new Date();
     const days = ['Today', 'Tomorrow', 'Day 3'];
     
@@ -81,17 +63,35 @@ const ThreeDayForecast: React.FC<ThreeDayForecastProps> = ({ expanded = false })
         description: getWeatherDescription(condition)
       };
     });
-  };
+  }, []);
 
-  const getWeatherDescription = (condition: string): string => {
-    switch (condition) {
-      case 'sunny': return 'Clear and sunny';
-      case 'partly-cloudy': return 'Partly cloudy';
-      case 'cloudy': return 'Overcast';
-      case 'rainy': return 'Rain expected';
-      default: return 'Variable conditions';
+  const fetchForecast = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/weather/forecast');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch forecast');
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setForecast(data.forecast);
+      }
+    } catch (err) {
+      console.error('Error fetching forecast:', err);
+      setError('Failed to load forecast');
+      // Fallback to mock data for now
+      setForecast(generateMockForecast());
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [generateMockForecast]);
+
+  useEffect(() => {
+    fetchForecast();
+  }, [fetchForecast]);
 
   const getWeatherIcon = (condition: string) => {
     switch (condition) {

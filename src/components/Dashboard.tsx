@@ -5,6 +5,7 @@ import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDa
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import WeatherWidget from './WeatherWidget';
 import PlantEntryForm from '@/components/PlantEntryForm';
 import AnalyticsCards from './AnalyticsCards';
@@ -86,10 +87,12 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-950 text-gray-100 flex flex-col items-center p-4 md:p-6 selection:bg-emerald-500 selection:text-white">
       <header className="w-full max-w-7xl mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
         <div className="flex items-center space-x-3">
-          <img 
+          <Image 
             src="/almaniaclogo.svg" 
             alt="Almaniac Logo" 
-            className="h-10 w-10 md:h-12 md:w-12" 
+            width={48}
+            height={48}
+            className="md:w-12 md:h-12" 
           />
           <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-green-500">
             Almaniac

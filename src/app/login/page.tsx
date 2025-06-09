@@ -4,6 +4,7 @@ import { useState, FormEvent, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 function LoginForm() {
   const router = useRouter();
@@ -68,10 +69,12 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
-          <img 
+          <Image 
             src="/almaniaclogo.svg" 
             alt="Almaniac Logo" 
-            className="h-16 w-16 mb-4" 
+            width={64}
+            height={64}
+            className="mb-4" 
           />
           <h1 className="text-3xl font-bold text-center text-green-400">Log In to Almaniac</h1>
         </div>
