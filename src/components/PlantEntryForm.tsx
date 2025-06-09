@@ -74,6 +74,10 @@ export default function PlantEntryForm({ plant }: PlantEntryFormProps) {
   }, [fetchGardens]);
 
   useEffect(() => {
+    fetchPlants();
+  }, []);
+
+  useEffect(() => {
     const fetchLocations = async () => {
       if (!selectedGardenId) {
         setLocations([]);
