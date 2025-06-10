@@ -311,6 +311,7 @@
 4. **🔒 Better Error Handling:** Improved error messages when gardens aren't accessible
 5. **🐛 Invitation Acceptance:** Added comprehensive error handling and logging for invitation acceptance debugging
 6. **🔧 Debug Tools:** Enhanced debug API for troubleshooting garden invitation issues
+7. **✅ Duplicate Member Fix:** Fixed "User is already a member" error - now gracefully updates invitation status for existing members
 
 ### How Garden Sharing Now Works:
 1. **Share Button:** Click "Share my Garden" to get direct link + send email invitations

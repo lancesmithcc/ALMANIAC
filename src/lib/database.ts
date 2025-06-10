@@ -965,12 +965,23 @@ export async function acceptGardenInvitation(invitationId: string, userId: strin
     
     // Check if user is already a member
     const [existingMemberRows] = await connection.execute(
-      'SELECT id FROM garden_memberships WHERE garden_id = ? AND user_id = ?',
+      'SELECT id, role FROM garden_memberships WHERE garden_id = ? AND user_id = ?',
       [invitation.garden_id, userId]
     );
     
-    if ((existingMemberRows as unknown[]).length > 0) {
-      throw new Error('User is already a member of this garden');
+    const existingMembers = existingMemberRows as unknown[];
+    if (existingMembers.length > 0) {
+      console.log('User is already a member, just updating invitation status');
+      
+      // User is already a member, just update the invitation status
+      await connection.execute(
+        'UPDATE garden_invitations SET status = "accepted", invited_user_id = ?, updated_at = NOW() WHERE id = ?',
+        [userId, invitationId]
+      );
+      
+      console.log('Invitation marked as accepted for existing member');
+      await connection.commit();
+      return; // Exit successfully
     }
     
     // Get permissions for role
