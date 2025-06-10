@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Star, Sun, Moon, Calendar, Sprout, Target, Info, Settings } from 'lucide-react';
+import { Star, Sun, Moon, Sprout, Target, Info, Settings, Zap } from 'lucide-react';
+import { 
+  generateEvolutionaryProfile, 
+  getCurrentEvolutionaryTransits,
+  getGalacticCenterInfluence,
+  EVOLUTIONARY_THEMES,
+
+  type EvolutionaryProfile,
+  type EvolutionaryTransit
+} from '@/lib/evolutionary-astrology';
 
 interface ZodiacSign {
   name: string;
@@ -24,13 +33,8 @@ interface AstrologicalProfile {
   planetaryInfluences: string[];
   optimalPlantingTimes: string[];
   personalizedGuidance: string[];
-}
-
-interface PlanetaryTransit {
-  planet: string;
-  sign: string;
-  effect: string;
-  gardening_advice: string;
+  evolutionary?: EvolutionaryProfile;
+  galacticInfluence?: string;
 }
 
 const zodiacSigns: { [key: string]: ZodiacSign } = {
@@ -131,7 +135,7 @@ const zodiacSigns: { [key: string]: ZodiacSign } = {
     gardeningTraits: ['Adventurous grower', 'Loves exotic plants', 'Big picture gardener', 'Philosophical approach'],
     favoritePlants: ['Exotic varieties', 'Large-scale projects', 'International plants', 'Expansion gardens', 'Teaching gardens'],
     plantingTiming: 'Jupiter aspects for expansion and growth',
-    element_description: 'Fire energy encourages adventurous growing and garden expansion'
+    element_description: 'Fire energy encourages adventurous growing and garden expansion. ⭐ GALACTIC CENTER CONNECTION ⭐'
   },
   'Capricorn': {
     name: 'Capricorn',
@@ -174,7 +178,8 @@ export default function AstrologicalProfile() {
   const [birthDate, setBirthDate] = useState('');
   const [birthTime, setBirthTime] = useState('');
   const [birthLocation, setBirthLocation] = useState('');
-  const [currentTransits, setCurrentTransits] = useState<PlanetaryTransit[]>([]);
+  const [currentTransits, setCurrentTransits] = useState<EvolutionaryTransit[]>([]);
+  const [galacticInfluence, setGalacticInfluence] = useState<string>('');
 
   // Load saved profile
   useEffect(() => {
@@ -186,60 +191,46 @@ export default function AstrologicalProfile() {
     }
   }, []);
 
-  // Calculate sun sign from birth date
-  const calculateSunSign = (date: string): string => {
-    const birthDate = new Date(date);
-    const month = birthDate.getMonth() + 1;
-    const day = birthDate.getDate();
-    
-    if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return 'Aries';
-    if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return 'Taurus';
-    if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return 'Gemini';
-    if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return 'Cancer';
-    if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return 'Leo';
-    if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return 'Virgo';
-    if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return 'Libra';
-    if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return 'Scorpio';
-    if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return 'Sagittarius';
-    if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return 'Capricorn';
-    if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return 'Aquarius';
-    return 'Pisces';
-  };
+  // Get current galactic influence
+  useEffect(() => {
+    const today = new Date();
+    setGalacticInfluence(getGalacticCenterInfluence(today));
+  }, []);
 
-  // Generate personalized guidance based on zodiac sign
-  const generatePersonalizedGuidance = (sunSign: string): string[] => {
-    const sign = zodiacSigns[sunSign];
-    if (!sign) return [];
-
-    return [
-      `As a ${sign.name}, you naturally ${sign.gardeningTraits[0].toLowerCase()}`,
-      `Your ${sign.element} energy ${sign.element_description.toLowerCase()}`,
-      `Best planting time: ${sign.plantingTiming}`,
-      `Focus on ${sign.favoritePlants?.[0] || 'your favorite plants'} for best results`,
-      `Your ${sign.modality} nature means you ${sign.modality === 'Cardinal' ? 'initiate new garden projects' : sign.modality === 'Fixed' ? 'maintain established gardens' : 'adapt to changing garden conditions'}`
-    ];
-  };
-
-  // Create astrological profile
+  // Create evolutionary astrological profile
   const createProfile = () => {
     if (!birthDate) return;
     
-    const sunSign = calculateSunSign(birthDate);
+    const birthDateObj = new Date(birthDate);
+    const evolutionaryProfile = generateEvolutionaryProfile(birthDateObj);
+    
     const newProfile: AstrologicalProfile = {
-      sunSign,
+      sunSign: evolutionaryProfile.sunSign,
       birthDate,
-      gardeningPersonality: zodiacSigns[sunSign]?.gardeningTraits[0] || 'Intuitive Gardener',
+      gardeningPersonality: EVOLUTIONARY_THEMES[evolutionaryProfile.sunSign as keyof typeof EVOLUTIONARY_THEMES]?.gardeningMission || 'Evolutionary Gardener',
       planetaryInfluences: [
-        'Sun in ' + sunSign + ' influences your core gardening style',
-        'Moon phases affect your planting intuition',
-        'Venus transits enhance garden beauty and harvest'
+        `Sun in ${evolutionaryProfile.sunSign}: ${EVOLUTIONARY_THEMES[evolutionaryProfile.sunSign as keyof typeof EVOLUTIONARY_THEMES]?.soulPurpose}`,
+        `North Node in ${evolutionaryProfile.northNode}: Future evolutionary direction`,
+        `South Node in ${evolutionaryProfile.southNode}: Past life patterns to transform`,
+        `Galactic alignment: ${evolutionaryProfile.galacticAlignment.toFixed(1)}° from Galactic Center`
       ],
       optimalPlantingTimes: [
-        zodiacSigns[sunSign]?.plantingTiming || 'Follow lunar calendar',
-        'New moon for new plantings',
-        'Full moon for harvesting'
+        'New moon for evolutionary intentions',
+        'Full moon for harvesting peak energy',
+        'Galactic Center transits for cosmic downloads',
+        'Personal evolutionary timing based on your chart'
       ],
-      personalizedGuidance: generatePersonalizedGuidance(sunSign)
+      personalizedGuidance: [
+        `Soul Purpose: ${evolutionaryProfile.soulPurpose}`,
+        `Gardening Mission: ${evolutionaryProfile.gardeningMission}`,
+        `Karmatic Pattern: ${evolutionaryProfile.karmaticPattern}`,
+        `Evolutionary Theme: ${evolutionaryProfile.evolutionaryTheme}`,
+        evolutionaryProfile.sunSign === 'Sagittarius' ? 
+          '🌌 SPECIAL: You carry direct Galactic Center energy - you are a cosmic wisdom keeper in gardening!' :
+          `🌌 Your ${evolutionaryProfile.galacticAlignment.toFixed(0)}° connection to Galactic Center brings cosmic perspective to your garden work`
+      ],
+      evolutionary: evolutionaryProfile,
+      galacticInfluence: getGalacticCenterInfluence(birthDateObj)
     };
     
     setProfile(newProfile);
@@ -247,39 +238,15 @@ export default function AstrologicalProfile() {
     setShowForm(false);
   };
 
-  // Get current planetary transits (simplified)
-  const getCurrentTransits = useCallback(() => {
-    const today = new Date();
-    const month = today.getMonth() + 1;
-    
-    // Simplified transit calculations (in real app, use ephemeris data)
-    const transits: PlanetaryTransit[] = [
-      {
-        planet: 'Sun',
-        sign: calculateSunSign(today.toISOString().split('T')[0]),
-        effect: 'Core energy and vitality in garden work',
-        gardening_advice: 'Focus on plants that match current solar energy'
-      },
-      {
-        planet: 'Moon',
-        sign: ['Cancer', 'Taurus', 'Virgo', 'Capricorn'][Math.floor(month / 3)],
-        effect: 'Emotional connection and nurturing energy',
-        gardening_advice: 'Trust your intuition with plant care timing'
-      },
-      {
-        planet: 'Venus',
-        sign: ['Libra', 'Taurus', 'Pisces', 'Cancer'][Math.floor(month / 3)],
-        effect: 'Beauty, harmony, and abundance in garden',
-        gardening_advice: 'Perfect time for aesthetic garden improvements'
-      }
-    ];
-    
+  // Get current evolutionary transits
+  const getEvolutionaryTransits = useCallback(() => {
+    const transits = getCurrentEvolutionaryTransits();
     setCurrentTransits(transits);
   }, []);
 
   useEffect(() => {
-    getCurrentTransits();
-  }, [getCurrentTransits]);
+    getEvolutionaryTransits();
+  }, [getEvolutionaryTransits]);
 
   const resetProfile = () => {
     localStorage.removeItem('almaniac-astrological-profile');
@@ -293,7 +260,20 @@ export default function AstrologicalProfile() {
         <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
           <div className="flex items-center mb-6">
             <Star className="w-6 h-6 mr-2 text-purple-400" />
-            <h2 className="text-2xl font-semibold text-white">Create Your Astrological Garden Profile</h2>
+            <h2 className="text-2xl font-semibold text-white">Create Your Evolutionary Garden Profile</h2>
+          </div>
+          
+          <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <Zap className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-purple-400">Evolutionary & Tropical Astrology</h3>
+                <p className="text-sm text-gray-300 mt-1">
+                  This system uses <strong>tropical astrology</strong> (seasonal/equinox-based) combined with <strong>evolutionary astrology</strong> principles. 
+                  The Galactic Center is positioned at <strong>27° Sagittarius</strong>, connecting your garden practice to cosmic evolution and soul purpose.
+                </p>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -306,7 +286,7 @@ export default function AstrologicalProfile() {
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Used to determine your sun sign and gardening personality</p>
+              <p className="text-xs text-gray-500 mt-1">Used for tropical sun sign and evolutionary calculations</p>
             </div>
 
             <div>
@@ -317,7 +297,7 @@ export default function AstrologicalProfile() {
                 onChange={(e) => setBirthTime(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">For more precise moon and rising sign calculations</p>
+              <p className="text-xs text-gray-500 mt-1">For more precise moon, rising, and house calculations</p>
             </div>
 
             <div>
@@ -329,7 +309,7 @@ export default function AstrologicalProfile() {
                 placeholder="City, Country"
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">For accurate rising sign and house calculations</p>
+              <p className="text-xs text-gray-500 mt-1">For accurate rising sign and evolutionary timing</p>
             </div>
 
             <button
@@ -337,7 +317,7 @@ export default function AstrologicalProfile() {
               disabled={!birthDate}
               className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg transition-colors"
             >
-              Create Astrological Profile
+              Generate Evolutionary Profile
             </button>
           </div>
         </div>
@@ -348,17 +328,30 @@ export default function AstrologicalProfile() {
   if (!profile) return null;
 
   const currentSign = zodiacSigns[profile.sunSign];
+  const evolutionaryData = profile.evolutionary;
 
   return (
     <div className="space-y-6">
-      {/* Profile Overview */}
+      {/* Galactic Center Influence Banner */}
+      <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4">
+        <div className="flex items-center space-x-3 mb-2">
+          <Zap className="w-5 h-5 text-yellow-400" />
+          <h3 className="font-semibold text-yellow-400">Current Galactic Center Influence</h3>
+        </div>
+        <p className="text-yellow-200 text-sm">{galacticInfluence}</p>
+      </div>
+
+      {/* Evolutionary Profile Overview */}
       <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <span className="text-3xl">{currentSign?.symbol}</span>
             <div>
-              <h2 className="text-2xl font-semibold text-white">{profile.sunSign} Gardener</h2>
-              <p className="text-purple-400">{profile.gardeningPersonality}</p>
+              <h2 className="text-2xl font-semibold text-white">{profile.sunSign} Evolutionary Gardener</h2>
+              <p className="text-purple-400">{evolutionaryData?.evolutionaryTheme}</p>
+              {profile.sunSign === 'Sagittarius' && (
+                <p className="text-yellow-400 text-sm font-medium">🌌 Galactic Center Guardian</p>
+              )}
             </div>
           </div>
           <button
@@ -373,56 +366,55 @@ export default function AstrologicalProfile() {
           <div className="bg-gray-800/30 rounded-lg p-4">
             <div className="flex items-center mb-2">
               <Sun className="w-5 h-5 text-yellow-400 mr-2" />
-              <span className="text-sm text-gray-400">Element</span>
+              <span className="text-sm text-gray-400">Soul Purpose</span>
             </div>
-            <p className="text-white font-medium">{currentSign?.element}</p>
-            <p className="text-xs text-gray-500 mt-1">{currentSign?.element_description}</p>
+            <p className="text-white font-medium">{evolutionaryData?.soulPurpose}</p>
           </div>
 
           <div className="bg-gray-800/30 rounded-lg p-4">
             <div className="flex items-center mb-2">
               <Target className="w-5 h-5 text-emerald-400 mr-2" />
-              <span className="text-sm text-gray-400">Modality</span>
+              <span className="text-sm text-gray-400">Garden Mission</span>
             </div>
-            <p className="text-white font-medium">{currentSign?.modality}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {currentSign?.modality === 'Cardinal' ? 'Initiative and leadership' :
-               currentSign?.modality === 'Fixed' ? 'Stability and persistence' :
-               'Adaptability and flexibility'}
-            </p>
+            <p className="text-white font-medium">{evolutionaryData?.gardeningMission}</p>
           </div>
 
           <div className="bg-gray-800/30 rounded-lg p-4">
             <div className="flex items-center mb-2">
-              <Calendar className="w-5 h-5 text-blue-400 mr-2" />
-              <span className="text-sm text-gray-400">Dates</span>
+              <Zap className="w-5 h-5 text-purple-400 mr-2" />
+              <span className="text-sm text-gray-400">Galactic Alignment</span>
             </div>
-            <p className="text-white font-medium">{currentSign?.dates}</p>
+            <p className="text-white font-medium">{evolutionaryData?.galacticAlignment.toFixed(1)}° from Galactic Center</p>
+            <p className="text-xs text-gray-500 mt-1">27° Sagittarius</p>
           </div>
         </div>
       </div>
 
-      {/* Gardening Traits */}
-      <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <Sprout className="w-5 h-5 mr-2 text-green-400" />
-          Your Gardening Traits
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {currentSign?.gardeningTraits.map((trait, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <span className="text-green-400">•</span>
-              <span className="text-gray-300">{trait}</span>
+      {/* Lunar Nodes */}
+      {evolutionaryData?.northNode && (
+        <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <Moon className="w-5 h-5 mr-2 text-blue-400" />
+            Evolutionary Lunar Nodes
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <h4 className="font-medium text-green-400 mb-2">North Node in {evolutionaryData.northNode}</h4>
+              <p className="text-green-200 text-sm">Future evolutionary direction - grow toward these qualities in your garden practice</p>
             </div>
-          ))}
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+              <h4 className="font-medium text-orange-400 mb-2">South Node in {evolutionaryData.southNode}</h4>
+              <p className="text-orange-200 text-sm">Past life gifts to transform - use but don&apos;t over-rely on these patterns</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Personalized Guidance */}
+      {/* Evolutionary Guidance */}
       <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
           <Star className="w-5 h-5 mr-2 text-purple-400" />
-          Personalized Guidance
+          Evolutionary Garden Guidance
         </h3>
         <div className="space-y-3">
           {profile.personalizedGuidance.map((guidance, index) => (
@@ -433,21 +425,23 @@ export default function AstrologicalProfile() {
         </div>
       </div>
 
-      {/* Current Planetary Transits */}
+      {/* Current Evolutionary Transits */}
       <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <Moon className="w-5 h-5 mr-2 text-blue-400" />
-          Current Planetary Influences
+          <Target className="w-5 h-5 mr-2 text-orange-400" />
+          Current Evolutionary Transits
         </h3>
         <div className="space-y-3">
           {currentTransits.map((transit, index) => (
-            <div key={index} className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+            <div key={index} className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-blue-400">{transit.planet} in {transit.sign}</span>
+                <span className="font-medium text-orange-400">{transit.planet} in {transit.currentSign} ({transit.degree.toFixed(1)}°)</span>
                 <Info className="w-4 h-4 text-gray-400" />
               </div>
-              <p className="text-gray-300 text-sm mb-1">{transit.effect}</p>
-              <p className="text-blue-200 text-sm font-medium">{transit.gardening_advice}</p>
+              <p className="text-gray-300 text-sm mb-1">{transit.evolutionarySignificance}</p>
+              <p className="text-orange-200 text-sm mb-1"><strong>Garden Guidance:</strong> {transit.gardeningGuidance}</p>
+              <p className="text-purple-200 text-sm mb-1"><strong>Karmatic Lesson:</strong> {transit.karmaticLesson}</p>
+              <p className="text-yellow-200 text-sm"><strong>Galactic Influence:</strong> {transit.galacticInfluence}</p>
             </div>
           ))}
         </div>
@@ -458,7 +452,7 @@ export default function AstrologicalProfile() {
         <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
             <Sprout className="w-5 h-5 mr-2 text-green-400" />
-            Plants That Resonate With You
+            Plants That Resonate With Your Evolution
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {currentSign.favoritePlants.map((plant, index) => (
@@ -467,16 +461,23 @@ export default function AstrologicalProfile() {
               </div>
             ))}
           </div>
+          <p className="text-sm text-gray-400 mt-3">
+            These plants align with your {currentSign.element} element and {currentSign.modality} modality for evolutionary growth.
+          </p>
         </div>
       )}
 
-      <div className="flex justify-center">
+      <div className="flex justify-center space-x-4">
         <button
           onClick={resetProfile}
           className="text-gray-400 hover:text-white text-sm transition-colors"
         >
           Reset Profile
         </button>
+        <span className="text-gray-600">•</span>
+        <span className="text-xs text-gray-500">
+          Tropical Astrology • Galactic Center @ 27° ♐
+        </span>
       </div>
     </div>
   );

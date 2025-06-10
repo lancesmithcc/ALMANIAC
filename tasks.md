@@ -603,3 +603,113 @@ Without this initialization, the following features will fail with 500 errors:
 - [x] Update API validation to accept location_id for plants
 - [x] **PENDING:** Apply garden schema fix to production database
 - [x] **PENDING:** Test location creation after schema fix
+
+## ✅ EVOLUTIONARY ASTROLOGY SYSTEM IMPLEMENTATION 
+
+### 🌌 Complete Alignment with Evolutionary & Tropical Astrology Principles
+
+**NEW IMPLEMENTATION (JUST COMPLETED):** The astrological system has been completely restructured to align with **evolutionary astrology** and **tropical astrology** principles, with the **Galactic Center positioned at 27° Sagittarius**.
+
+### Key Features Implemented:
+
+🌟 **Tropical Astrology Foundation**:
+- Uses seasonal/equinox-based zodiac (not sidereal)
+- Accurate tropical zodiac boundaries for all calculations
+- Element and modality assignments based on tropical positions
+- Proper seasonal timing for garden activities
+
+⭐ **Galactic Center Integration (27° Sagittarius)**:
+- Galactic Center positioned at exactly 27° Sagittarius in tropical zodiac
+- Special recognition for Sagittarius natives as "Galactic Center Guardians"
+- Peak galactic influence periods (December 19-21 annually)
+- Galactic consciousness integration into garden practices
+- Direct cosmic downloads during galactic transits
+
+🧬 **Evolutionary Astrology Principles**:
+- **Lunar Nodes**: North Node (evolutionary direction) and South Node (karmic patterns)
+- **Soul Purpose**: Each sign's evolutionary mission and spiritual growth path
+- **Karmatic Patterns**: Past-life gifts to transform and integrate
+- **Evolutionary Themes**: 12 detailed evolutionary journeys for each zodiac sign
+- **Galactic Alignment**: Personal degree-distance from Galactic Center
+
+### Comprehensive Zodiac Evolution Themes:
+
+Each sign now includes:
+- **Soul Purpose**: Core evolutionary lesson
+- **Gardening Mission**: How to express evolution through plants
+- **Karmatic Pattern**: What to transform from past experiences
+- **Galactic Lessons**: How to align with cosmic consciousness
+
+**Special Sagittarius Enhancement**:
+- Contains the Galactic Center at 27°
+- Recognized as carriers of galactic wisdom
+- Enhanced cosmic downloads and intuitive guidance
+- Direct connection to universal consciousness through gardening
+
+### Enhanced Components:
+
+🔧 **New Evolutionary Astrology Module** (`src/lib/evolutionary-astrology.ts`):
+- Tropical zodiac calculations with proper boundaries
+- Galactic Center influence calculations
+- Evolutionary profile generation with lunar nodes
+- Current planetary transits with evolutionary significance
+- Moon evolutionary messages and guidance
+
+🎨 **Updated AstrologicalProfile Component**:
+- Full evolutionary profile with soul purpose and garden mission
+- Galactic alignment calculations (degrees from 27° Sagittarius)
+- Lunar nodes with evolutionary guidance
+- Real-time galactic center influence display
+- Enhanced for Sagittarius Galactic Center Guardians
+
+📅 **Enhanced BiodynamicCalendar Component**:
+- Tropical zodiac moon sign calculations
+- Evolutionary biodynamic guidance
+- Galactic center influence integration
+- Special Sagittarius moon guidance
+- Plant care schedules with evolutionary purpose
+
+### Evolutionary Planetary Transits:
+
+Current major transits included:
+- **Pluto in Aquarius** (2023-2044): Collective transformation through innovation
+- **Jupiter Aspects**: Expansion of wisdom and abundance
+- **Saturn in Pisces** (2023-2026): Disciplined spiritual practice
+- Each transit includes evolutionary significance and galactic influence
+
+### Galactic Center Features:
+
+🌌 **Peak Periods**: December 19-21 annually for maximum cosmic downloads
+🌌 **Enhanced Intuition**: Stronger galactic influence during December
+🌌 **Cosmic Guidance**: Direct connection to galactic wisdom for garden decisions
+🌌 **Sagittarius Connection**: Special recognition and enhanced features for this sign
+
+### How Users Access:
+
+1. **Astrological Tab** in main dashboard → AstrologicalProfile
+2. **Birth Date Input** generates complete evolutionary profile
+3. **Galactic Alignment** shows exact degree distance from Galactic Center
+4. **Evolutionary Guidance** provides soul-purpose-driven garden advice
+5. **Biodynamic Calendar** integrates tropical moon signs with evolutionary timing
+
+### Technical Implementation:
+
+✅ **Tropical Astrology**: All calculations use seasonal/equinox references
+✅ **Galactic Center**: Precisely positioned at 27° Sagittarius
+✅ **Evolutionary Framework**: Complete soul evolution mapping
+✅ **Lunar Nodes**: 18.6-year cycle calculations for karmic direction
+✅ **Real-time Transits**: Current planetary positions with evolutionary meaning
+✅ **Cosmic Timing**: Galactic center influence periods identified
+✅ **Build Successful**: All TypeScript compilation passed
+
+### Evolutionary vs. Traditional Astrology:
+
+**Traditional Astrology**: Personality traits and predictions
+**Evolutionary Astrology**: Soul growth, karmic patterns, spiritual evolution
+
+**Traditional Garden Timing**: Basic moon phases and elements
+**Evolutionary Garden Timing**: Soul-aligned intentions, galactic downloads, conscious co-creation
+
+This system transforms gardening from a physical practice into a **conscious evolutionary tool** for spiritual growth and cosmic alignment.
+
+## ✅ SHARED DASHBOARD FIX APPLIED
