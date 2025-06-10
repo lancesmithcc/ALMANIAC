@@ -1,11 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getGardenById, getGardenLocationsByGardenId, getPlantsByGardenId, getGardenMemberships, getUserGardenMembership } from '@/lib/database';
+import { getGardenLocationsByGardenId, getPlantsByGardenId, getGardenMemberships, getUserGardenMembership } from '@/lib/database';
 import { Plant } from '@/types';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+// New function to get garden for public access - doesn't require membership
+async function getGardenForPublicAccess(gardenId: string) {
+  const { getDbPool } = await import('@/lib/database');
+  const pool = getDbPool();
+  
+  const [rows] = await pool.execute(`
+    SELECT id, user_id, name, description, notes, created_at, updated_at
+    FROM gardens 
+    WHERE id = ?
+  `, [gardenId]);
+  
+  const gardens = rows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (gardens.length > 0) {
+    const row = gardens[0];
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      name: row.name,
+      description: row.description,
+      notes: row.notes,
+      created_at: new Date(row.created_at),
+      updated_at: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
+    };
+  }
+  return null;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -13,26 +40,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id: gardenId } = await params;
     const session = await getServerSession(authOptions);
 
-    // Get garden details first
-    const garden = await getGardenById(gardenId, session?.user?.id || '');
+    // Get garden details using public access method
+    const garden = await getGardenForPublicAccess(gardenId);
     
     if (!garden) {
       return NextResponse.json({ error: 'Garden not found' }, { status: 404 });
     }
 
-    // Check if user has access to this garden
-    let hasAccess = false;
+    // Check if user has special access to this garden (owner or member)
+    let hasSpecialAccess = false;
+    let userRole: string | null = null;
     
     if (session?.user?.id) {
-      // Check if user is owner or has membership
-      const membership = await getUserGardenMembership(gardenId, session.user.id);
-      hasAccess = garden.user_id === session.user.id || !!membership;
-    }
-
-    // For now, allow public access to any garden (you can modify this later for privacy settings)
-    // In a real-world scenario, you might have a "public" flag on gardens
-    if (!hasAccess && !session?.user?.id) {
-      // Allow anonymous viewing but limit data
+      // Check if user is owner
+      if (garden.user_id === session.user.id) {
+        hasSpecialAccess = true;
+        userRole = 'owner';
+      } else {
+        // Check if user has membership
+        const membership = await getUserGardenMembership(gardenId, session.user.id);
+        if (membership) {
+          hasSpecialAccess = true;
+          userRole = membership.role;
+        }
+      }
     }
 
     try {
@@ -61,6 +92,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         total_plants: plants.length,
         unique_types: uniqueTypes,
         member_count: memberCount,
+        user_role: userRole,
+        has_special_access: hasSpecialAccess,
       };
 
       return NextResponse.json(gardenWithData);
@@ -75,6 +108,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         total_plants: 0,
         unique_types: 0,
         member_count: 0,
+        user_role: userRole,
+        has_special_access: hasSpecialAccess,
       });
     }
 

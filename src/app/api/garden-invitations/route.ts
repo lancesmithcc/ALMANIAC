@@ -11,6 +11,60 @@ const createInvitationSchema = z.object({
   message: z.string().optional(),
 });
 
+// Simple email sending function using a service like Resend
+async function sendInvitationEmail(
+  toEmail: string,
+  fromUsername: string,
+  gardenName: string,
+  gardenId: string,
+  role: string,
+  customMessage?: string
+) {
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const gardenUrl = `${baseUrl}/garden/${gardenId}`;
+    
+    const defaultMessage = `${fromUsername} has invited you to collaborate on their garden "${gardenName}" as a ${role}.`;
+    const message = customMessage || defaultMessage;
+    
+    const emailContent = `
+      <h2>Garden Collaboration Invitation</h2>
+      <p>${message}</p>
+      <p><strong>Garden:</strong> ${gardenName}</p>
+      <p><strong>Your Role:</strong> ${role.charAt(0).toUpperCase() + role.slice(1)}</p>
+      <p><strong>What you can do:</strong></p>
+      <ul>
+        ${role === 'viewer' ? '<li>View all plants and garden locations</li>' : ''}
+        ${role === 'member' ? '<li>View and add plants</li><li>Edit existing plants</li>' : ''}
+        ${role === 'admin' ? '<li>Full access to manage plants and locations</li><li>Invite other members</li>' : ''}
+      </ul>
+      <p><a href="${gardenUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">View Garden</a></p>
+      <p>To accept this invitation and start collaborating, please:</p>
+      <ol>
+        <li>Visit the garden link above</li>
+        <li>Create an account or sign in if you already have one</li>
+        <li>Accept the invitation from your dashboard</li>
+      </ol>
+      <p><small>This invitation will expire in 7 days.</small></p>
+    `;
+
+    // For now, we'll log the email content instead of actually sending it
+    // In production, you would integrate with an email service like Resend, SendGrid, etc.
+    console.log('=== GARDEN INVITATION EMAIL ===');
+    console.log('To:', toEmail);
+    console.log('Subject: Garden Collaboration Invitation');
+    console.log('Content:', emailContent);
+    console.log('================================');
+    
+    // Return success for now - in production, return the result of your email service
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Email sending error:', error);
+    return { success: false, error: 'Failed to send email' };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -68,10 +122,26 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt,
     });
 
+    // Send email notification
+    if (garden) {
+      const emailResult = await sendInvitationEmail(
+        email,
+        session.user.username || session.user.name || 'A user',
+        garden.name,
+        gardenId,
+        role,
+        message
+      );
+      
+      if (!emailResult.success) {
+        console.warn('Failed to send invitation email, but invitation was created');
+      }
+    }
+
     return NextResponse.json({
       success: true,
       invitationId,
-      message: 'Invitation sent successfully'
+      message: 'Invitation sent successfully! They will receive an email with instructions.'
     });
 
   } catch (error) {

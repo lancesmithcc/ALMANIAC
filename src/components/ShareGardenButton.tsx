@@ -110,9 +110,17 @@ export default function ShareGardenButton({ gardenId, gardenName }: ShareGardenB
               </button>
             </div>
 
-            <p className="text-gray-300 text-sm mb-4">
-              Share your entire garden including all locations and plants with other users.
-            </p>
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+              <p className="text-blue-200 text-sm mb-2">
+                <strong>How garden sharing works:</strong>
+              </p>
+              <ul className="text-blue-200 text-xs space-y-1 list-disc list-inside">
+                <li>Share the link below for public viewing</li>
+                <li>Send email invitations for collaboration access</li>
+                <li>Recipients must create an account to collaborate</li>
+                <li>Check your dashboard for invitation responses</li>
+              </ul>
+            </div>
 
             {/* Share Link Section */}
             <div className="mb-6">
@@ -135,16 +143,19 @@ export default function ShareGardenButton({ gardenId, gardenName }: ShareGardenB
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                Anyone with this link can view your garden. They&apos;ll need to create an account to collaborate.
+                Anyone with this link can view your garden publicly. To collaborate, they need to create an account and you can send them an invitation below.
               </p>
             </div>
 
             {/* Email Invitation Section */}
             <div className="border-t border-gray-700 pt-4">
-              <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+              <h4 className="text-white font-medium mb-2 flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 Send Invitation
               </h4>
+              <p className="text-xs text-gray-400 mb-3">
+                Send an email invitation with instructions for joining your garden. They&apos;ll need to sign up/log in to accept.
+              </p>
 
               {/* Error/Success Messages */}
               {error && (

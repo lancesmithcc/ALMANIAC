@@ -133,10 +133,14 @@ export default function GardenViewPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-950 text-gray-100 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 mb-4">
+            <h2 className="text-xl font-bold text-white mb-3">Garden Not Available</h2>
             <p className="text-red-400 mb-4">{error}</p>
+            
             {!session && (
               <div className="space-y-3">
-                <p className="text-gray-300 text-sm">Sign in to request access to this garden</p>
+                <p className="text-gray-300 text-sm">
+                  This garden may be private. If you received an invitation, please sign in to view it.
+                </p>
                 <Link 
                   href={`/login?callbackUrl=${encodeURIComponent(window.location.href)}`}
                   className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -146,14 +150,22 @@ export default function GardenViewPage() {
                 </Link>
               </div>
             )}
+            
+            {session && (
+              <div className="space-y-3">
+                <p className="text-gray-300 text-sm">
+                  You don&apos;t have access to this garden. If you received an invitation, check your dashboard for pending invitations.
+                </p>
+                <Link 
+                  href="/"
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Go to Dashboard
+                </Link>
+              </div>
+            )}
           </div>
-          <Link 
-            href="/"
-            className="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Link>
         </div>
       </div>
     );
