@@ -240,6 +240,41 @@
 - [x] Test the new garden sharing system
 - [x] Move sharing functionality to a dedicated garden settings page
 
+## ✅ MAJOR NEW FEATURE: Astrological Garden System
+
+### Complete Astrological Integration Implemented!
+- **Personal Astrological Profile**: Users can create detailed astrological profiles based on birth date, time, and location
+- **Zodiac-Based Gardening**: 12 zodiac signs with specific gardening personalities, traits, and preferred plants
+- **Biodynamic Calendar**: Real-time lunar calendar with Root/Leaf/Flower/Fruit day classifications
+- **Planetary Transits**: Current planetary movements with specific gardening guidance
+- **Astrological Notifications**: Timely alerts for optimal planting, harvesting, and garden activities
+- **Plant Care Schedules**: Personalized astrological timing for each user's plants
+
+### Key Features:
+🌟 **Astrological Profile System**:
+- Birth chart-based gardening personality analysis
+- Element and modality insights (Fire/Earth/Air/Water, Cardinal/Fixed/Mutable)
+- Personalized plant recommendations based on zodiac sign
+- Current planetary transit tracking with garden advice
+
+🗓️ **Biodynamic Calendar**:
+- Weekly view with moon signs and elements
+- Root/Leaf/Flower/Fruit day classifications
+- Specific planting and harvesting recommendations
+- Avoid/optimal activity guidance for each day
+
+🔔 **Astrological Notifications**:
+- Moon phase alerts (New/Full moon optimal timing)
+- Planetary transit notifications
+- Mercury retrograde warnings
+- Plant-specific astrological care reminders
+
+### How Users Access:
+1. **New "Astrological" tab** in main dashboard navigation
+2. **Four sub-sections**: Profile, Biodynamic Calendar, Planetary Transits, Astrological Alerts
+3. **Integrated with existing plant data** for personalized scheduling
+4. **Local storage** for profile persistence
+
 ## Recent Updates ✅
 
 ### Garden Sharing System (Just Completed!)
@@ -347,10 +382,10 @@ The app is fully functional with:
 - [ ] Harvest planning and preservation guides
 
 ### Astrological Features
-- [ ] Personal astrological garden profile
-- [ ] Planetary transit notifications for optimal timing
-- [ ] Biodynamic calendar integration
-- [ ] Plant-specific astrological care schedules
+- [x] Personal astrological garden profile
+- [x] Planetary transit notifications for optimal timing
+- [x] Biodynamic calendar integration
+- [x] Plant-specific astrological care schedules
 
 ## 📝 Notes
 
