@@ -1,68 +1,47 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getGardens, getUserGardenMembership } from '@/lib/database';
-import { Garden, GardenMembership } from '@/types';
+import { NextRequest, NextResponse } from 'next/server';
+import { getDbPool } from '@/lib/database';
 
-interface MembershipCheck {
-  gardenId: string;
-  gardenName: string;
-  membership?: GardenMembership | null;
-  canEditGarden: boolean;
-  error?: string;
-}
-
-interface DebugInfo {
-  userId: string;
-  username: string;
-  gardens: Garden[];
-  membershipChecks: MembershipCheck[];
-}
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's gardens
-    const gardens = await getGardens(session.user.id);
+    const pool = getDbPool();
     
-    const debugInfo: DebugInfo = {
-      userId: session.user.id,
-      username: session.user.username || 'Unknown',
-      gardens: gardens,
-      membershipChecks: []
-    };
-
-    // Check membership for each garden
-    for (const garden of gardens) {
-      try {
-        const membership = await getUserGardenMembership(garden.id, session.user.id);
-        debugInfo.membershipChecks.push({
-          gardenId: garden.id,
-          gardenName: garden.name,
-          membership: membership,
-          canEditGarden: membership?.permissions?.can_edit_garden || false
-        });
-      } catch (error) {
-        debugInfo.membershipChecks.push({
-          gardenId: garden.id,
-          gardenName: garden.name,
-          membership: null,
-          canEditGarden: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
+    // Get invitation details
+    const invitationId = request.nextUrl.searchParams.get('invitationId');
+    
+    if (invitationId) {
+      // Check specific invitation
+      const [invitationRows] = await pool.execute(
+        'SELECT * FROM garden_invitations WHERE id = ?',
+        [invitationId]
+      );
+      
+      // Check garden_memberships table exists and structure
+      const [membershipTableRows] = await pool.execute(
+        'DESCRIBE garden_memberships'
+      );
+      
+      // Check garden_invitations table exists and structure  
+      const [invitationTableRows] = await pool.execute(
+        'DESCRIBE garden_invitations'
+      );
+      
+      return NextResponse.json({
+        invitation: invitationRows,
+        membershipTableStructure: membershipTableRows,
+        invitationTableStructure: invitationTableRows
+      });
     }
-
-    return NextResponse.json(debugInfo);
-  } catch (error) {
+    
+    // General debug info
+    const [tables] = await pool.execute('SHOW TABLES');
+    
     return NextResponse.json({
-      error: 'Debug failed',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    }, { status: 500 });
+      tables,
+      message: 'Add ?invitationId=<id> to debug a specific invitation'
+    });
+    
+  } catch (error) {
+    console.error('Debug error:', error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 } 

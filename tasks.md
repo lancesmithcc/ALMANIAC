@@ -309,6 +309,8 @@
 2. **📧 Email Notifications:** Added email system that logs invitation details (ready for email service integration)
 3. **💡 User Experience:** Added clear instructions and help text explaining the sharing process
 4. **🔒 Better Error Handling:** Improved error messages when gardens aren't accessible
+5. **🐛 Invitation Acceptance:** Added comprehensive error handling and logging for invitation acceptance debugging
+6. **🔧 Debug Tools:** Enhanced debug API for troubleshooting garden invitation issues
 
 ### How Garden Sharing Now Works:
 1. **Share Button:** Click "Share my Garden" to get direct link + send email invitations

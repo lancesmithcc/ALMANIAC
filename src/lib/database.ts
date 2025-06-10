@@ -940,6 +940,7 @@ export async function acceptGardenInvitation(invitationId: string, userId: strin
   const connection = await pool.getConnection();
   
   try {
+    console.log('Accepting invitation:', { invitationId, userId });
     await connection.beginTransaction();
     
     // Get invitation details
@@ -949,15 +950,40 @@ export async function acceptGardenInvitation(invitationId: string, userId: strin
     );
     
     const invitations = invitationRows as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    console.log('Found invitations:', invitations.length);
+    
     if (invitations.length === 0) {
       throw new Error('Invitation not found or already processed');
     }
     
     const invitation = invitations[0];
+    console.log('Invitation details:', { 
+      garden_id: invitation.garden_id, 
+      role: invitation.role,
+      email: invitation.invited_user_email 
+    });
+    
+    // Check if user is already a member
+    const [existingMemberRows] = await connection.execute(
+      'SELECT id FROM garden_memberships WHERE garden_id = ? AND user_id = ?',
+      [invitation.garden_id, userId]
+    );
+    
+    if ((existingMemberRows as unknown[]).length > 0) {
+      throw new Error('User is already a member of this garden');
+    }
+    
+    // Get permissions for role
+    const permissions = DEFAULT_PERMISSIONS[invitation.role as keyof typeof DEFAULT_PERMISSIONS];
+    console.log('Role permissions:', permissions);
+    
+    if (!permissions) {
+      throw new Error(`Invalid role: ${invitation.role}`);
+    }
     
     // Create garden membership
     const membershipId = uuidv4();
-    const permissions = DEFAULT_PERMISSIONS[invitation.role as keyof typeof DEFAULT_PERMISSIONS];
+    console.log('Creating membership with ID:', membershipId);
     
     await connection.execute(
       `INSERT INTO garden_memberships (
@@ -972,14 +998,18 @@ export async function acceptGardenInvitation(invitationId: string, userId: strin
       ]
     );
     
+    console.log('Membership created, updating invitation status');
+    
     // Update invitation status
     await connection.execute(
       'UPDATE garden_invitations SET status = "accepted", invited_user_id = ?, updated_at = NOW() WHERE id = ?',
       [userId, invitationId]
     );
     
+    console.log('Invitation accepted successfully');
     await connection.commit();
   } catch (error) {
+    console.error('Error accepting invitation:', error);
     await connection.rollback();
     throw error;
   } finally {
