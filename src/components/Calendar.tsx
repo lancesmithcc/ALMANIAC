@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Bell, Target, Sprout, AlertTriangle, Calendar as CalendarIcon, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Bell, Target, AlertTriangle, Calendar as CalendarIcon } from 'lucide-react';
 
 interface CalendarEvent {
   id: string;
