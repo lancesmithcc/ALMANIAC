@@ -289,6 +289,35 @@ export async function getPlants(userId: string): Promise<Plant[]> {
   return rows as Plant[];
 }
 
+// Get plants from all gardens the user has access to (owned + member of)
+export async function getPlantsFromAccessibleGardens(userId: string): Promise<Plant[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT DISTINCT p.* 
+    FROM plants p
+    INNER JOIN garden_locations gl ON p.location_id = gl.id
+    INNER JOIN gardens g ON gl.garden_id = g.id
+    LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+    WHERE g.user_id = ? OR gm.user_id = ?
+    ORDER BY p.created_at DESC
+  `, [userId, userId]);
+  
+  return (rows as unknown[]).map((row: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: row.id,
+    user_id: row.user_id,
+    plant_type: row.plant_type,
+    variety: row.variety,
+    planting_date: row.planting_date,
+    location: row.location,
+    location_id: row.location_id,
+    notes: row.notes,
+    health_status: row.health_status,
+    stage: row.stage,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  }));
+}
+
 export async function getPlantById(id: string, userId: string): Promise<Plant | null> {
   const pool = getDbPool();
   const [rows] = await pool.execute('SELECT * FROM plants WHERE id = ? AND user_id = ?', [id, userId]);
@@ -469,34 +498,70 @@ export async function getDashboardStats(userId: string) {
   const pool = getDbPool();
   
   try {
-    const [plantsCount] = await pool.execute('SELECT COUNT(*) as total FROM plants WHERE user_id = ?', [userId]);
-    const [healthyPlants] = await pool.execute("SELECT COUNT(*) as healthy FROM plants WHERE user_id = ? AND health_status IN ('excellent', 'good')", [userId]);
-    const [needsAttention] = await pool.execute("SELECT COUNT(*) as needs_attention FROM plants WHERE user_id = ? AND health_status IN ('fair', 'poor')", [userId]);
+    // Update queries to include plants from accessible gardens (owned + member)
+    const [plantsCount] = await pool.execute(`
+      SELECT COUNT(DISTINCT p.id) as total 
+      FROM plants p
+      INNER JOIN garden_locations gl ON p.location_id = gl.id
+      INNER JOIN gardens g ON gl.garden_id = g.id
+      LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+      WHERE g.user_id = ? OR gm.user_id = ?
+    `, [userId, userId]);
+    
+    const [healthyPlants] = await pool.execute(`
+      SELECT COUNT(DISTINCT p.id) as healthy 
+      FROM plants p
+      INNER JOIN garden_locations gl ON p.location_id = gl.id
+      INNER JOIN gardens g ON gl.garden_id = g.id
+      LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+      WHERE (g.user_id = ? OR gm.user_id = ?) AND p.health_status IN ('excellent', 'good')
+    `, [userId, userId]);
+    
+    const [needsAttention] = await pool.execute(`
+      SELECT COUNT(DISTINCT p.id) as needs_attention 
+      FROM plants p
+      INNER JOIN garden_locations gl ON p.location_id = gl.id
+      INNER JOIN gardens g ON gl.garden_id = g.id
+      LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+      WHERE (g.user_id = ? OR gm.user_id = ?) AND p.health_status IN ('fair', 'poor')
+    `, [userId, userId]);
+    
     const [recentActivities] = await pool.execute('SELECT COUNT(*) as recent FROM activity_logs WHERE user_id = ? AND timestamp > DATE_SUB(NOW(), INTERVAL 7 DAY)', [userId]);
+    
     const [avgHealth] = await pool.execute(`
       SELECT AVG(
-        CASE health_status 
+        CASE p.health_status 
           WHEN 'excellent' THEN 100
           WHEN 'good' THEN 80
           WHEN 'fair' THEN 60
           WHEN 'poor' THEN 40
           ELSE 50
         END
-      ) as avg_health FROM plants WHERE user_id = ?
-    `, [userId]);
+      ) as avg_health 
+      FROM plants p
+      INNER JOIN garden_locations gl ON p.location_id = gl.id
+      INNER JOIN gardens g ON gl.garden_id = g.id
+      LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+      WHERE g.user_id = ? OR gm.user_id = ?
+    `, [userId, userId]);
     
-    // Calculate next harvest estimate based on plant stages
+    // Calculate next harvest estimate based on plant stages from accessible gardens
     const [nextHarvest] = await pool.execute(`
       SELECT MIN(
-        CASE stage 
+        CASE p.stage 
           WHEN 'seedling' THEN 60
           WHEN 'vegetative' THEN 30
           WHEN 'flowering' THEN 14
           WHEN 'fruiting' THEN 7
           ELSE 30
         END
-      ) as next_harvest_days FROM plants WHERE user_id = ? AND stage IN ('seedling', 'vegetative', 'flowering', 'fruiting')
-    `, [userId]);
+      ) as next_harvest_days 
+      FROM plants p
+      INNER JOIN garden_locations gl ON p.location_id = gl.id
+      INNER JOIN gardens g ON gl.garden_id = g.id
+      LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+      WHERE (g.user_id = ? OR gm.user_id = ?) AND p.stage IN ('seedling', 'vegetative', 'flowering', 'fruiting')
+    `, [userId, userId]);
 
     // Check for weather alerts (simplified - could be enhanced with real weather API)
     const [recentWeather] = await pool.execute(`
@@ -713,6 +778,19 @@ export async function createGardenLocation(location: Omit<GardenLocation, 'id' |
 export async function getGardenLocations(userId: string): Promise<GardenLocation[]> {
   const pool = getDbPool();
   const [rows] = await pool.execute('SELECT * FROM garden_locations WHERE user_id = ? ORDER BY name ASC', [userId]);
+  return rows as GardenLocation[];
+}
+
+export async function getGardenLocationsFromAccessibleGardens(userId: string): Promise<GardenLocation[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.execute(`
+    SELECT DISTINCT gl.* 
+    FROM garden_locations gl
+    INNER JOIN gardens g ON gl.garden_id = g.id
+    LEFT JOIN garden_memberships gm ON g.id = gm.garden_id
+    WHERE g.user_id = ? OR gm.user_id = ?
+    ORDER BY gl.name ASC
+  `, [userId, userId]);
   return rows as GardenLocation[];
 }
 

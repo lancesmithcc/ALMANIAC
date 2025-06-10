@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth";
-import { getPlants, getGardenLocations } from '@/lib/database';
+import { getPlantsFromAccessibleGardens, getGardenLocationsFromAccessibleGardens } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,21 +32,21 @@ export async function POST(request: NextRequest) {
     let weatherRecords = 0;
     
     try {
-      plants = await getPlants(session.user.id);
+      plants = await getPlantsFromAccessibleGardens(session.user.id);
       plantsCount = plants.length;
-      console.log('Successfully fetched plants:', plantsCount);
+      console.log('Successfully fetched plants from accessible gardens:', plantsCount);
     } catch (error) {
-      console.error('Failed to fetch plants:', error);
+      console.error('Failed to fetch plants from accessible gardens:', error);
       plants = [];
       plantsCount = 0;
     }
 
     try {
-      gardenLocations = await getGardenLocations(session.user.id);
+      gardenLocations = await getGardenLocationsFromAccessibleGardens(session.user.id);
       locationsCount = gardenLocations.length;
-      console.log('Successfully fetched garden locations:', locationsCount);
+      console.log('Successfully fetched garden locations from accessible gardens:', locationsCount);
     } catch (error) {
-      console.error('Failed to fetch garden locations:', error);
+      console.error('Failed to fetch garden locations from accessible gardens:', error);
       gardenLocations = [];
       locationsCount = 0;
     }

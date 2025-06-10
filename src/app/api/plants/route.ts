@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPlant, getPlants } from '@/lib/database';
+import { createPlant, getPlantsFromAccessibleGardens } from '@/lib/database';
 import { PlantFormData } from '@/types';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth";
@@ -11,7 +11,8 @@ export async function GET() {
   }
 
   try {
-    const plants = await getPlants(session.user.id);
+    // Get plants from all gardens the user has access to (owned + member)
+    const plants = await getPlantsFromAccessibleGardens(session.user.id);
     return NextResponse.json({
       success: true,
       plants
