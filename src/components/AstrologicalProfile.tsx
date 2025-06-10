@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, Sun, Moon, Calendar, Sprout, Target, Info, Settings } from 'lucide-react';
 
 interface ZodiacSign {
@@ -24,6 +24,13 @@ interface AstrologicalProfile {
   planetaryInfluences: string[];
   optimalPlantingTimes: string[];
   personalizedGuidance: string[];
+}
+
+interface PlanetaryTransit {
+  planet: string;
+  sign: string;
+  effect: string;
+  gardening_advice: string;
 }
 
 const zodiacSigns: { [key: string]: ZodiacSign } = {
@@ -167,7 +174,7 @@ export default function AstrologicalProfile() {
   const [birthDate, setBirthDate] = useState('');
   const [birthTime, setBirthTime] = useState('');
   const [birthLocation, setBirthLocation] = useState('');
-  const [currentTransits, setCurrentTransits] = useState<any[]>([]);
+  const [currentTransits, setCurrentTransits] = useState<PlanetaryTransit[]>([]);
 
   // Load saved profile
   useEffect(() => {
@@ -241,12 +248,12 @@ export default function AstrologicalProfile() {
   };
 
   // Get current planetary transits (simplified)
-  const getCurrentTransits = () => {
+  const getCurrentTransits = useCallback(() => {
     const today = new Date();
     const month = today.getMonth() + 1;
     
     // Simplified transit calculations (in real app, use ephemeris data)
-    const transits = [
+    const transits: PlanetaryTransit[] = [
       {
         planet: 'Sun',
         sign: calculateSunSign(today.toISOString().split('T')[0]),
@@ -268,11 +275,11 @@ export default function AstrologicalProfile() {
     ];
     
     setCurrentTransits(transits);
-  };
+  }, []);
 
   useEffect(() => {
     getCurrentTransits();
-  }, []);
+  }, [getCurrentTransits]);
 
   const resetProfile = () => {
     localStorage.removeItem('almaniac-astrological-profile');

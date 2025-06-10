@@ -23,6 +23,12 @@ interface PlantCareSchedule {
   astrologicalGuidance: string;
 }
 
+interface Plant {
+  plant_type?: string;
+  stage?: string;
+  [key: string]: unknown;
+}
+
 const elementColors = {
   'Fire': 'from-red-500/20 to-orange-500/20 border-red-500/30',
   'Earth': 'from-green-500/20 to-emerald-500/20 border-green-500/30',
@@ -202,8 +208,8 @@ export default function BiodynamicCalendar() {
     // Load user's plants from localStorage or API
     const savedPlants = localStorage.getItem('almaniac-plants');
     if (savedPlants) {
-      const plants = JSON.parse(savedPlants);
-      const schedules: PlantCareSchedule[] = plants.slice(0, 5).map((plant: any) => {
+      const plants: Plant[] = JSON.parse(savedPlants);
+      const schedules: PlantCareSchedule[] = plants.slice(0, 5).map((plant: Plant) => {
         const today = new Date();
         const biodynamicDay = calculateBiodynamicDay(today);
         
@@ -219,7 +225,7 @@ export default function BiodynamicCalendar() {
     }
   }, []);
 
-  const getNextAction = (plant: any, biodynamicDay: BiodynamicDay): string => {
+  const getNextAction = (plant: Plant, biodynamicDay: BiodynamicDay): string => {
     const stage = plant.stage || 'growing';
     const plantType = plant.plant_type?.toLowerCase() || '';
     
@@ -236,7 +242,7 @@ export default function BiodynamicCalendar() {
     }
   };
 
-  const getOptimalTiming = (plant: any, biodynamicDay: BiodynamicDay): string => {
+  const getOptimalTiming = (plant: Plant, biodynamicDay: BiodynamicDay): string => {
     if (biodynamicDay.moonPhase.includes('New')) {
       return 'Best time for new beginnings';
     } else if (biodynamicDay.moonPhase.includes('Full')) {
@@ -248,7 +254,7 @@ export default function BiodynamicCalendar() {
     }
   };
 
-  const getAstrologicalGuidance = (plant: any, biodynamicDay: BiodynamicDay): string => {
+  const getAstrologicalGuidance = (plant: Plant, biodynamicDay: BiodynamicDay): string => {
     const element = biodynamicDay.element;
     switch (element) {
       case 'Fire':
