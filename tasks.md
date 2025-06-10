@@ -22,6 +22,13 @@
 - [x] **CRITICAL FIX:** Created fix-garden-schema API endpoint to rebuild garden tables
 - [x] **CRITICAL FIX:** Added "Fix Database Schema" button to debug panel
 
+## Calendar and User Experience Updates
+- [x] Remove community tab from navigation
+- [x] Create comprehensive calendar component with moon phases
+- [x] Add alarm/reminder system for harvest and garden activities
+- [x] Integrate moon phase emojis prominently in calendar
+- [ ] Add notifications/alerts for scheduled garden tasks
+
 ## API Integration
 - [x] Set up Weather API integration
 - [x] Set up DeepSeek AI integration
@@ -38,6 +45,7 @@
 - [x] **NEW:** Create moon phase API with astrological calculations
 - [x] **ENHANCED:** Upgrade AI system with permaculture and astrological guidance
 - [x] **FIXED:** Resolve 502 Bad Gateway errors in AI analysis route
+- [ ] Create alarms/reminders API for calendar events
 
 ## Core Features
 - [x] Create dashboard layout
@@ -331,11 +339,6 @@ The app is fully functional with:
 - [ ] Offline functionality for core features
 - [ ] Push notifications for plant care reminders
 
-### Advanced Features
-- [ ] Plant disease identification using image recognition
-- [ ] Community features (plant sharing, local gardener network)
-- [ ] Integration with IoT sensors for automated monitoring
-- [ ] Advanced analytics and growth prediction models
 
 ### Permaculture Expansion
 - [ ] Garden design tool with zone planning

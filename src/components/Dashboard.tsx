@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Users, Settings, HelpCircle, AreaChart } from 'lucide-react';
+import { BarChart2, Leaf, Cloud, UserCircle, LogIn, LogOut, UserPlus, CalendarDays, Brain, Settings, HelpCircle, AreaChart } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import AIInsights from './AIInsights';
 import WeatherTrendsChart from './WeatherTrendsChart';
 import ThreeDayForecast from '@/components/ThreeDayForecast';
 import GardenInvitations from './GardenInvitations';
+import Calendar from './Calendar';
 
 const navItems = [
   { name: 'Overview', icon: AreaChart },
@@ -21,8 +22,7 @@ const navItems = [
   { name: 'Weather', icon: Cloud },
   { name: 'Analytics', icon: BarChart2 },
   { name: 'Insights', icon: Brain },
-  { name: 'Community', icon: Users, comingSoon: true },
-  { name: 'Calendar', icon: CalendarDays, comingSoon: true },
+  { name: 'Calendar', icon: CalendarDays },
   { name: 'Settings', icon: Settings },
   { name: 'Help & Support', icon: HelpCircle, comingSoon: true },
 ];
@@ -75,6 +75,8 @@ export default function Dashboard() {
         );
       case 'Insights':
         return <AIInsights />;
+      case 'Calendar':
+        return <Calendar />;
       case 'Settings':
         router.push('/settings');
         return null;
